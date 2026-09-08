@@ -1,11 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/auth_service.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+
+    if (!authService.isFirebaseAvailable) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Yönetim Paneli'),
+          backgroundColor: Colors.black87,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.cloud_off, size: 64, color: Colors.yellow),
+                SizedBox(height: 16),
+                Text(
+                  'Firebase Bağlantısı Yok',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Yönetim paneli bulut veritabanı (Firestore) gerektirir. Şu anda yerel/demo moddasınız.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(

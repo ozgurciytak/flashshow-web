@@ -17,28 +17,36 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   void _submit() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('empty_fields'.tr()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     final authService = Provider.of<AuthService>(context, listen: false);
     
-    bool success = false;
-    if (_isLogin) {
-      success = await authService.signIn(
-        _emailController.text.trim(), 
-        _passwordController.text.trim()
-      );
-    } else {
-      success = await authService.signUp(
-        _emailController.text.trim(), 
-        _passwordController.text.trim()
-      );
-    }
+    final String? errorMessage = _isLogin
+      ? await authService.signIn(email, password)
+      : await authService.signUp(email, password);
     
-    setState(() => _isLoading = false);
-    
-    if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bir hata oluştu. Bilgilerinizi kontrol edin.')),
-      );
+    if (mounted) {
+      setState(() => _isLoading = false);
+      if (errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 

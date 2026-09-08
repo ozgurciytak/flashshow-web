@@ -15,5 +15,13 @@
   "enable_screen": "Ekran Renklerini Kullan",
   "tap_to_stop": "Şovu Kapatmak İçin Dokun",
   "no_team_found": "Bu lige ait takım bulunamadı.",
-  "language": "Dil"
+  "language": "Dil",
+  "change_team": "Takım Değiştir",
+  "guest_badge": "Misafir (Demo)",
+  "invalid_email": "Lütfen geçerli bir e-posta adresi girin.",
+  "invalid_password": "Şifre en az 6 karakter olmalıdır.",
+  "empty_fields": "Lütfen tüm alanları doldurun.",
+  "login_failed": "Giriş yapılamadı. Bilgilerinizi kontrol edin.",
+  "signup_failed": "Kayıt oluşturulamadı.",
+  "demo_welcome": "Misafir Modu Aktif"
 }

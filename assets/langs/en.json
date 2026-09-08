@@ -15,5 +15,13 @@
   "enable_screen": "Enable Screen Colors",
   "tap_to_stop": "Tap to Stop the Show",
   "no_team_found": "No teams found for this league.",
-  "language": "Language"
+  "language": "Language",
+  "change_team": "Change Team",
+  "guest_badge": "Guest (Demo)",
+  "invalid_email": "Please enter a valid email address.",
+  "invalid_password": "Password must be at least 6 characters.",
+  "empty_fields": "Please fill in all fields.",
+  "login_failed": "Login failed. Please check your credentials.",
+  "signup_failed": "Registration failed.",
+  "demo_welcome": "Guest Mode Active"
 }
