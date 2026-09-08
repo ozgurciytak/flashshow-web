@@ -24,5 +24,11 @@
   "login_failed": "Giriş yapılamadı. Bilgilerinizi kontrol edin.",
   "signup_failed": "Kayıt oluşturulamadı.",
   "demo_welcome": "Misafir Modu Aktif",
-  "search_team": "Takım Ara..."
+  "search_team": "Takım Ara...",
+  "sync_badge": "⚡ CANLI SENKRONİZE",
+  "sync_subtext": "Farklı anda girseniz bile tüm tribünle aynı anda çakar",
+  "countdown_ready": "Telefonunu Havaya Kaldır!",
+  "countdown_starting": "Koreografi Başlıyor...",
+  "enable_countdown": "Geri Sayımla Başlat (Koreografi)",
+  "screen_visuals": "Takım Arması ve Ekran Görseli"
 }

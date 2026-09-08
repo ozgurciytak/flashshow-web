@@ -24,5 +24,11 @@
   "login_failed": "Login failed. Please check your credentials.",
   "signup_failed": "Registration failed.",
   "demo_welcome": "Guest Mode Active",
-  "search_team": "Search Team..."
+  "search_team": "Search Team...",
+  "sync_badge": "⚡ LIVE SYNCHRONIZED",
+  "sync_subtext": "Flashes in exact unison with all fans, even if opened late",
+  "countdown_ready": "Raise Your Phone Up!",
+  "countdown_starting": "Choreography Starting...",
+  "enable_countdown": "Start with Countdown (Choreography)",
+  "screen_visuals": "Team Crest & Screen Visuals"
 }
