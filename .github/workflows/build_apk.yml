@@ -33,11 +33,19 @@ jobs:
             flutter create . --platforms=android --org=com.flashshow.app
           fi
 
-      - name: Configure Gradle minSdkVersion
+      - name: Configure Gradle for SDK 34 and Firebase
         run: |
-          # Ensure minSdk is at least 21 for Firebase
+          # Set compileSdk and targetSdk to 34, minSdk to 21
+          find android/app -name "build.gradle*" -exec sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' {} +
+          find android/app -name "build.gradle*" -exec sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 34/g' {} +
+          find android/app -name "build.gradle*" -exec sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' {} +
+          find android/app -name "build.gradle*" -exec sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/g' {} +
           find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' {} +
           find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' {} +
+          # Force subprojects to compile against SDK 34
+          if [ -f "android/build.gradle" ]; then
+            printf "\nsubprojects {\n    afterEvaluate { project ->\n        if (project.hasProperty('android')) {\n            project.android {\n                compileSdkVersion 34\n            }\n        }\n    }\n}\n" >> android/build.gradle
+          fi
 
       - name: Get Flutter dependencies
         run: flutter pub get
