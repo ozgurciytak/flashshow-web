@@ -33,31 +33,44 @@ jobs:
             flutter create . --platforms=android --org=com.flashshow.app
           fi
 
-      - name: Configure Gradle for AGP 8 and Firebase
+      - name: Configure Gradle minSdkVersion
         run: |
+          # Ensure minSdk is at least 21 for Firebase
           find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' {} +
           find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' {} +
-          if [ -f "android/build.gradle" ]; then
-            echo "subprojects { afterEvaluate { project -> if (project.hasProperty('android')) { project.android { if (namespace == null) { namespace project.group } } } } }" >> android/build.gradle
-          fi
 
       - name: Get Flutter dependencies
         run: flutter pub get
 
       - name: Build Release APK
         run: |
+          set -e
+          set -o pipefail
           flutter build apk --release --no-tree-shake-icons 2>&1 | tee build_log.txt
+
+      - name: Print Build Log on Failure
+        if: failure()
+        run: |
+          echo "=== LAST 150 LINES OF BUILD LOG ==="
+          tail -n 150 build_log.txt
+
+      - name: Locate Built Files
+        if: always()
+        run: |
+          echo "=== SEARCHING FOR APK FILES ==="
+          find build -name "*.apk" -type f || echo "No apk found"
 
       - name: Upload APK to Artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: FlashShow-Release-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/**/*.apk
+          if-no-files-found: error
 
-      - name: Upload Build Log on Failure
-        if: failure()
+      - name: Upload Build Log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-failure-log
+          name: build-log
           path: build_log.txt
