@@ -33,12 +33,13 @@ jobs:
             flutter create . --platforms=android --org=com.flashshow.app
           fi
 
-      - name: Add Camera and Flashlight permissions to AndroidManifest
+      - name: Configure Android Gradle for Firebase
         run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST" ]; then
-            sed -i '/<manifest/a \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.FLASHLIGHT" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />' "$MANIFEST"
-          fi
+          # Set minSdkVersion to 21 for Firebase
+          find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' {} +
+          find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' {} +
+          # Enable multiDex
+          find android/app -name "build.gradle" -exec sed -i '/defaultConfig {/a \        multiDexEnabled true' {} +
 
       - name: Get Flutter dependencies
         run: flutter pub get
@@ -47,6 +48,7 @@ jobs:
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK to Artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: FlashShow-Release-APK
