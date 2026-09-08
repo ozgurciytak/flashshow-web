@@ -23,5 +23,6 @@
   "empty_fields": "Please fill in all fields.",
   "login_failed": "Login failed. Please check your credentials.",
   "signup_failed": "Registration failed.",
-  "demo_welcome": "Guest Mode Active"
+  "demo_welcome": "Guest Mode Active",
+  "search_team": "Search Team..."
 }

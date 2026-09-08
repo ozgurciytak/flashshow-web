@@ -23,5 +23,6 @@
   "empty_fields": "Lütfen tüm alanları doldurun.",
   "login_failed": "Giriş yapılamadı. Bilgilerinizi kontrol edin.",
   "signup_failed": "Kayıt oluşturulamadı.",
-  "demo_welcome": "Misafir Modu Aktif"
+  "demo_welcome": "Misafir Modu Aktif",
+  "search_team": "Takım Ara..."
 }

@@ -15,27 +15,92 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String? selectedLeague;
+  String? selectedLeague = 'Süper Lig';
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   static final List<TeamModel> defaultTeams = [
-    // Süper Lig
+    // --- SÜPER LİG (Eksiksiz 19 Takım) ---
     TeamModel(id: 'gs', name: 'Galatasaray', league: 'Süper Lig', primaryColorHex: 'A32638', secondaryColorHex: 'FDB912'),
     TeamModel(id: 'fb', name: 'Fenerbahçe', league: 'Süper Lig', primaryColorHex: '000080', secondaryColorHex: 'FFFF00'),
     TeamModel(id: 'bjk', name: 'Beşiktaş', league: 'Süper Lig', primaryColorHex: '000000', secondaryColorHex: 'FFFFFF'),
     TeamModel(id: 'ts', name: 'Trabzonspor', league: 'Süper Lig', primaryColorHex: '800000', secondaryColorHex: '0000FF'),
-    TeamModel(id: 'samsun', name: 'Samsunspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'goztepe', name: 'Göztepe', league: 'Süper Lig', primaryColorHex: 'FFE000', secondaryColorHex: 'DA291C'),
     TeamModel(id: 'ibfk', name: 'Başakşehir', league: 'Süper Lig', primaryColorHex: 'F58220', secondaryColorHex: '0B2240'),
-    TeamModel(id: 'antalya', name: 'Antalyaspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'sivas', name: 'Sivasspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'konya', name: 'Konyaspor', league: 'Süper Lig', primaryColorHex: '008542', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'samsun', name: 'Samsunspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
     TeamModel(id: 'eyup', name: 'Eyüpspor', league: 'Süper Lig', primaryColorHex: '4B1E87', secondaryColorHex: 'F9D616'),
-    // Diğer
-    TeamModel(id: 'rm', name: 'Real Madrid', league: 'Dünya', primaryColorHex: 'FFFFFF', secondaryColorHex: 'EEB211'),
-    TeamModel(id: 'barca', name: 'Barcelona', league: 'Dünya', primaryColorHex: '004D98', secondaryColorHex: 'A50044'),
-    TeamModel(id: 'mci', name: 'Manchester City', league: 'Dünya', primaryColorHex: '6CABDD', secondaryColorHex: '1C2C5B'),
-    TeamModel(id: 'liv', name: 'Liverpool', league: 'Dünya', primaryColorHex: 'C8102E', secondaryColorHex: '00B2A9'),
+    TeamModel(id: 'goztepe', name: 'Göztepe', league: 'Süper Lig', primaryColorHex: 'FFE000', secondaryColorHex: 'DA291C'),
+    TeamModel(id: 'sivas', name: 'Sivasspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'antalya', name: 'Antalyaspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'konya', name: 'Konyaspor', league: 'Süper Lig', primaryColorHex: '008542', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'kasimpasa', name: 'Kasımpaşa', league: 'Süper Lig', primaryColorHex: '0B2240', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'rize', name: 'Çaykur Rizespor', league: 'Süper Lig', primaryColorHex: '008542', secondaryColorHex: '005BBB'),
+    TeamModel(id: 'alanya', name: 'Alanyaspor', league: 'Süper Lig', primaryColorHex: 'FF6600', secondaryColorHex: '008542'),
+    TeamModel(id: 'gaziantep', name: 'Gaziantep FK', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
+    TeamModel(id: 'bodrum', name: 'Bodrum FK', league: 'Süper Lig', primaryColorHex: '008542', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'kayseri', name: 'Kayserispor', league: 'Süper Lig', primaryColorHex: 'FFCC00', secondaryColorHex: 'DA291C'),
+    TeamModel(id: 'hatay', name: 'Hatayspor', league: 'Süper Lig', primaryColorHex: '800000', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'adanads', name: 'Adana Demirspor', league: 'Süper Lig', primaryColorHex: '005BBB', secondaryColorHex: '0B2240'),
+
+    // --- DİĞER LİGLER (TFF 1. Lig & Köklü Türk Takımları) ---
+    TeamModel(id: 'kocaeli', name: 'Kocaelispor', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: '000000'),
+    TeamModel(id: 'sakarya', name: 'Sakaryaspor', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: '000000'),
+    TeamModel(id: 'bursa', name: 'Bursaspor', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'ankaragucu', name: 'Ankaragücü', league: 'Diğer Ligler', primaryColorHex: 'FDB912', secondaryColorHex: '000080'),
+    TeamModel(id: 'gencler', name: 'Gençlerbirliği', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
+    TeamModel(id: 'karagumruk', name: 'Fatih Karagümrük', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
+    TeamModel(id: 'istanbulspor', name: 'İstanbulspor', league: 'Diğer Ligler', primaryColorHex: 'FDB912', secondaryColorHex: '000000'),
+    TeamModel(id: 'pendik', name: 'Pendikspor', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'amed', name: 'Amed SK', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: 'E30613'),
+    TeamModel(id: 'erzurum', name: 'Erzurumspor', league: 'Diğer Ligler', primaryColorHex: '005BBB', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'bolu', name: 'Boluspor', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'bandirma', name: 'Bandırmaspor', league: 'Diğer Ligler', primaryColorHex: '800000', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'corum', name: 'Çorum FK', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
+    TeamModel(id: 'adanaspor', name: 'Adanaspor', league: 'Diğer Ligler', primaryColorHex: 'FF6600', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'karsiyaka', name: 'Karşıyaka', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: 'E30613'),
+    TeamModel(id: 'eskisehir', name: 'Eskişehirspor', league: 'Diğer Ligler', primaryColorHex: '000000', secondaryColorHex: 'E30613'),
+
+    // --- DİĞER LİGLER (İspanya - La Liga) ---
+    TeamModel(id: 'rm', name: 'Real Madrid', league: 'Diğer Ligler', primaryColorHex: 'FFFFFF', secondaryColorHex: 'EEB211'),
+    TeamModel(id: 'barca', name: 'Barcelona', league: 'Diğer Ligler', primaryColorHex: '004D98', secondaryColorHex: 'A50044'),
+    TeamModel(id: 'atm', name: 'Atletico Madrid', league: 'Diğer Ligler', primaryColorHex: 'CB3524', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'sevilla', name: 'Sevilla', league: 'Diğer Ligler', primaryColorHex: 'FFFFFF', secondaryColorHex: 'D4001F'),
+    TeamModel(id: 'bilbao', name: 'Athletic Bilbao', league: 'Diğer Ligler', primaryColorHex: 'EE2524', secondaryColorHex: 'FFFFFF'),
+
+    // --- DİĞER LİGLER (İngiltere - Premier League) ---
+    TeamModel(id: 'mci', name: 'Manchester City', league: 'Diğer Ligler', primaryColorHex: '6CABDD', secondaryColorHex: '1C2C5B'),
+    TeamModel(id: 'arsenal', name: 'Arsenal', league: 'Diğer Ligler', primaryColorHex: 'EF0107', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'liv', name: 'Liverpool', league: 'Diğer Ligler', primaryColorHex: 'C8102E', secondaryColorHex: '00B2A9'),
+    TeamModel(id: 'mun', name: 'Manchester United', league: 'Diğer Ligler', primaryColorHex: 'DA291C', secondaryColorHex: 'FBE122'),
+    TeamModel(id: 'chelsea', name: 'Chelsea', league: 'Diğer Ligler', primaryColorHex: '034694', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'tottenham', name: 'Tottenham', league: 'Diğer Ligler', primaryColorHex: '132257', secondaryColorHex: 'FFFFFF'),
+
+    // --- DİĞER LİGLER (İtalya - Serie A) ---
+    TeamModel(id: 'inter', name: 'Inter', league: 'Diğer Ligler', primaryColorHex: '0066B2', secondaryColorHex: '000000'),
+    TeamModel(id: 'milan', name: 'Milan', league: 'Diğer Ligler', primaryColorHex: 'FB090B', secondaryColorHex: '000000'),
+    TeamModel(id: 'juve', name: 'Juventus', league: 'Diğer Ligler', primaryColorHex: '000000', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'napoli', name: 'Napoli', league: 'Diğer Ligler', primaryColorHex: '12A0D7', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'roma', name: 'Roma', league: 'Diğer Ligler', primaryColorHex: '8E1F2F', secondaryColorHex: 'F19E00'),
+
+    // --- DİĞER LİGLER (Almanya - Bundesliga) ---
+    TeamModel(id: 'bayern', name: 'Bayern Münih', league: 'Diğer Ligler', primaryColorHex: 'DC052D', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'bvb', name: 'Borussia Dortmund', league: 'Diğer Ligler', primaryColorHex: 'FDE100', secondaryColorHex: '000000'),
+    TeamModel(id: 'leverkusen', name: 'Bayer Leverkusen', league: 'Diğer Ligler', primaryColorHex: '000000', secondaryColorHex: 'E32221'),
+
+    // --- DİĞER LİGLER (Fransa & Dünya) ---
+    TeamModel(id: 'psg', name: 'Paris Saint-Germain', league: 'Diğer Ligler', primaryColorHex: '004170', secondaryColorHex: 'DA291C'),
+    TeamModel(id: 'ajax', name: 'Ajax', league: 'Diğer Ligler', primaryColorHex: 'D2122E', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'benfica', name: 'Benfica', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'sporting', name: 'Sporting CP', league: 'Diğer Ligler', primaryColorHex: '008057', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'porto', name: 'Porto', league: 'Diğer Ligler', primaryColorHex: '003882', secondaryColorHex: 'FFFFFF'),
+    TeamModel(id: 'intermiami', name: 'Inter Miami', league: 'Diğer Ligler', primaryColorHex: 'F7B5CD', secondaryColorHex: '231F20'),
+    TeamModel(id: 'alnassr', name: 'Al-Nassr', league: 'Diğer Ligler', primaryColorHex: 'FFDD00', secondaryColorHex: '002B7F'),
   ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,31 +182,99 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildTeamAvatar(Color primary, Color secondary) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white24, width: 2),
+      ),
+      child: ClipOval(
+        child: Row(
+          children: [
+            Expanded(child: Container(color: primary)),
+            Expanded(child: Container(color: secondary)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTeamList(BuildContext context, AuthService authService, List<TeamModel> allTeams) {
     Set<String> leagues = allTeams.map((t) => t.league).toSet();
     if (!leagues.contains(selectedLeague)) {
       selectedLeague = leagues.isNotEmpty ? leagues.first : 'Süper Lig';
     }
 
-    List<TeamModel> filteredTeams = allTeams.where((t) => t.league == selectedLeague).toList();
+    List<TeamModel> filteredTeams;
+    if (_searchQuery.isNotEmpty) {
+      filteredTeams = allTeams.where((t) => t.name.toLowerCase().contains(_searchQuery)).toList();
+    } else {
+      filteredTeams = allTeams.where((t) => t.league == selectedLeague).toList();
+    }
 
     return Column(
       children: [
+        // Lig Seçim Açılır Menüsü
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
           child: DropdownButtonFormField<String>(
             value: selectedLeague,
             dropdownColor: Colors.grey[800],
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
             decoration: InputDecoration(
               labelText: 'select_league'.tr(),
               labelStyle: const TextStyle(color: Colors.yellow),
               enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
+              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow, width: 2)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             items: leagues.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-            onChanged: (val) => setState(() => selectedLeague = val),
+            onChanged: (val) {
+              setState(() {
+                selectedLeague = val;
+                _searchQuery = '';
+                _searchController.clear();
+              });
+            },
           ),
         ),
+        // Arama Çubuğu
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'search_team'.tr(),
+              hintStyle: const TextStyle(color: Colors.grey),
+              prefixIcon: const Icon(Icons.search, color: Colors.yellow),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.grey[850],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            ),
+            onChanged: (val) {
+              setState(() {
+                _searchQuery = val.trim().toLowerCase();
+              });
+            },
+          ),
+        ),
+        // Takım Listesi
         Expanded(
           child: filteredTeams.isEmpty
               ? Center(child: Text('no_team_found'.tr(), style: const TextStyle(color: Colors.white70)))
@@ -153,14 +286,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     Color secondaryColor = Color(int.parse('0xFF${team.secondaryColorHex}'));
                     return Card(
                       color: Colors.grey[850],
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: primaryColor,
-                          child: Icon(Icons.flash_on, color: secondaryColor, size: 20),
+                        leading: _buildTeamAvatar(primaryColor, secondaryColor),
+                        title: Text(
+                          team.name, 
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                        title: Text(team.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        subtitle: Text(team.league, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        subtitle: Text(
+                          team.league, 
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
                         trailing: const Icon(Icons.arrow_forward_ios, color: Colors.yellow, size: 16),
                         onTap: () => authService.updateUserTeam(team.id),
                       ),
