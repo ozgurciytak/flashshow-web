@@ -33,19 +33,35 @@ jobs:
             flutter create . --platforms=android --org=com.flashshow.app
           fi
 
-      - name: Configure Android Gradle for Firebase
+      - name: Configure Gradle for AGP 8 and Firebase
         run: |
-          # Set minSdkVersion to 21 for Firebase
+          # Set minSdkVersion to 21
           find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' {} +
           find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' {} +
-          # Enable multiDex
-          find android/app -name "build.gradle" -exec sed -i '/defaultConfig {/a \        multiDexEnabled true' {} +
+          # Add namespace fallback for older plugins to android/build.gradle
+          if [ -f "android/build.gradle" ]; then
+            cat << 'EOF' >> android/build.gradle
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    namespace project.group
+                }
+            }
+        }
+    }
+}
+EOF
+          fi
 
       - name: Get Flutter dependencies
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: |
+          flutter build apk --release --no-tree-shake-icons 2>&1 | tee build_log.txt
 
       - name: Upload APK to Artifacts
         if: success()
@@ -53,3 +69,10 @@ jobs:
         with:
           name: FlashShow-Release-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload Build Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-log
+          path: build_log.txt
