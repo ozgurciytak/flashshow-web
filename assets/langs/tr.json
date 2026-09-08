@@ -1,0 +1,19 @@
+{
+  "app_name": "Flash Show",
+  "login": "Giriş Yap",
+  "signup": "Kayıt Ol",
+  "guest_login": "Misafir Olarak Devam Et (Demo)",
+  "email": "E-posta",
+  "password": "Şifre",
+  "select_league": "Lig Seçin",
+  "select_team": "Takım Seçin",
+  "start_show": "ŞOVU BAŞLAT",
+  "logout": "Çıkış",
+  "admin_panel": "Yönetim Paneli",
+  "show_options": "Şov Seçenekleri",
+  "enable_flash": "Flaş Kullan",
+  "enable_screen": "Ekran Renklerini Kullan",
+  "tap_to_stop": "Şovu Kapatmak İçin Dokun",
+  "no_team_found": "Bu lige ait takım bulunamadı.",
+  "language": "Dil"
+}

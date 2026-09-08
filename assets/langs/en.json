@@ -1,0 +1,19 @@
+{
+  "app_name": "Flash Show",
+  "login": "Login",
+  "signup": "Sign Up",
+  "guest_login": "Continue as Guest (Demo)",
+  "email": "Email",
+  "password": "Password",
+  "select_league": "Select League",
+  "select_team": "Select Team",
+  "start_show": "START SHOW",
+  "logout": "Logout",
+  "admin_panel": "Admin Panel",
+  "show_options": "Show Options",
+  "enable_flash": "Enable Flashlight",
+  "enable_screen": "Enable Screen Colors",
+  "tap_to_stop": "Tap to Stop the Show",
+  "no_team_found": "No teams found for this league.",
+  "language": "Language"
+}
