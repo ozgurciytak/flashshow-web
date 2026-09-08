@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
 import '../models/team_model.dart';
 import 'show_screen.dart';
 import 'admin_screen.dart';
@@ -18,83 +18,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String? selectedLeague = 'Süper Lig';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-
-  static final List<TeamModel> defaultTeams = [
-    // --- SÜPER LİG (Eksiksiz 19 Takım) ---
-    TeamModel(id: 'gs', name: 'Galatasaray', league: 'Süper Lig', primaryColorHex: 'A32638', secondaryColorHex: 'FDB912'),
-    TeamModel(id: 'fb', name: 'Fenerbahçe', league: 'Süper Lig', primaryColorHex: '000080', secondaryColorHex: 'FFFF00'),
-    TeamModel(id: 'bjk', name: 'Beşiktaş', league: 'Süper Lig', primaryColorHex: '000000', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'ts', name: 'Trabzonspor', league: 'Süper Lig', primaryColorHex: '800000', secondaryColorHex: '0000FF'),
-    TeamModel(id: 'ibfk', name: 'Başakşehir', league: 'Süper Lig', primaryColorHex: 'F58220', secondaryColorHex: '0B2240'),
-    TeamModel(id: 'samsun', name: 'Samsunspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'eyup', name: 'Eyüpspor', league: 'Süper Lig', primaryColorHex: '4B1E87', secondaryColorHex: 'F9D616'),
-    TeamModel(id: 'goztepe', name: 'Göztepe', league: 'Süper Lig', primaryColorHex: 'FFE000', secondaryColorHex: 'DA291C'),
-    TeamModel(id: 'sivas', name: 'Sivasspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'antalya', name: 'Antalyaspor', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'konya', name: 'Konyaspor', league: 'Süper Lig', primaryColorHex: '008542', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'kasimpasa', name: 'Kasımpaşa', league: 'Süper Lig', primaryColorHex: '0B2240', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'rize', name: 'Çaykur Rizespor', league: 'Süper Lig', primaryColorHex: '008542', secondaryColorHex: '005BBB'),
-    TeamModel(id: 'alanya', name: 'Alanyaspor', league: 'Süper Lig', primaryColorHex: 'FF6600', secondaryColorHex: '008542'),
-    TeamModel(id: 'gaziantep', name: 'Gaziantep FK', league: 'Süper Lig', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
-    TeamModel(id: 'bodrum', name: 'Bodrum FK', league: 'Süper Lig', primaryColorHex: '008542', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'kayseri', name: 'Kayserispor', league: 'Süper Lig', primaryColorHex: 'FFCC00', secondaryColorHex: 'DA291C'),
-    TeamModel(id: 'hatay', name: 'Hatayspor', league: 'Süper Lig', primaryColorHex: '800000', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'adanads', name: 'Adana Demirspor', league: 'Süper Lig', primaryColorHex: '005BBB', secondaryColorHex: '0B2240'),
-
-    // --- DİĞER LİGLER (TFF 1. Lig & Köklü Türk Takımları) ---
-    TeamModel(id: 'kocaeli', name: 'Kocaelispor', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: '000000'),
-    TeamModel(id: 'sakarya', name: 'Sakaryaspor', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: '000000'),
-    TeamModel(id: 'bursa', name: 'Bursaspor', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'ankaragucu', name: 'Ankaragücü', league: 'Diğer Ligler', primaryColorHex: 'FDB912', secondaryColorHex: '000080'),
-    TeamModel(id: 'gencler', name: 'Gençlerbirliği', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
-    TeamModel(id: 'karagumruk', name: 'Fatih Karagümrük', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
-    TeamModel(id: 'istanbulspor', name: 'İstanbulspor', league: 'Diğer Ligler', primaryColorHex: 'FDB912', secondaryColorHex: '000000'),
-    TeamModel(id: 'pendik', name: 'Pendikspor', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'amed', name: 'Amed SK', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: 'E30613'),
-    TeamModel(id: 'erzurum', name: 'Erzurumspor', league: 'Diğer Ligler', primaryColorHex: '005BBB', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'bolu', name: 'Boluspor', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'bandirma', name: 'Bandırmaspor', league: 'Diğer Ligler', primaryColorHex: '800000', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'corum', name: 'Çorum FK', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: '000000'),
-    TeamModel(id: 'adanaspor', name: 'Adanaspor', league: 'Diğer Ligler', primaryColorHex: 'FF6600', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'karsiyaka', name: 'Karşıyaka', league: 'Diğer Ligler', primaryColorHex: '008542', secondaryColorHex: 'E30613'),
-    TeamModel(id: 'eskisehir', name: 'Eskişehirspor', league: 'Diğer Ligler', primaryColorHex: '000000', secondaryColorHex: 'E30613'),
-
-    // --- DİĞER LİGLER (İspanya - La Liga) ---
-    TeamModel(id: 'rm', name: 'Real Madrid', league: 'Diğer Ligler', primaryColorHex: 'FFFFFF', secondaryColorHex: 'EEB211'),
-    TeamModel(id: 'barca', name: 'Barcelona', league: 'Diğer Ligler', primaryColorHex: '004D98', secondaryColorHex: 'A50044'),
-    TeamModel(id: 'atm', name: 'Atletico Madrid', league: 'Diğer Ligler', primaryColorHex: 'CB3524', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'sevilla', name: 'Sevilla', league: 'Diğer Ligler', primaryColorHex: 'FFFFFF', secondaryColorHex: 'D4001F'),
-    TeamModel(id: 'bilbao', name: 'Athletic Bilbao', league: 'Diğer Ligler', primaryColorHex: 'EE2524', secondaryColorHex: 'FFFFFF'),
-
-    // --- DİĞER LİGLER (İngiltere - Premier League) ---
-    TeamModel(id: 'mci', name: 'Manchester City', league: 'Diğer Ligler', primaryColorHex: '6CABDD', secondaryColorHex: '1C2C5B'),
-    TeamModel(id: 'arsenal', name: 'Arsenal', league: 'Diğer Ligler', primaryColorHex: 'EF0107', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'liv', name: 'Liverpool', league: 'Diğer Ligler', primaryColorHex: 'C8102E', secondaryColorHex: '00B2A9'),
-    TeamModel(id: 'mun', name: 'Manchester United', league: 'Diğer Ligler', primaryColorHex: 'DA291C', secondaryColorHex: 'FBE122'),
-    TeamModel(id: 'chelsea', name: 'Chelsea', league: 'Diğer Ligler', primaryColorHex: '034694', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'tottenham', name: 'Tottenham', league: 'Diğer Ligler', primaryColorHex: '132257', secondaryColorHex: 'FFFFFF'),
-
-    // --- DİĞER LİGLER (İtalya - Serie A) ---
-    TeamModel(id: 'inter', name: 'Inter', league: 'Diğer Ligler', primaryColorHex: '0066B2', secondaryColorHex: '000000'),
-    TeamModel(id: 'milan', name: 'Milan', league: 'Diğer Ligler', primaryColorHex: 'FB090B', secondaryColorHex: '000000'),
-    TeamModel(id: 'juve', name: 'Juventus', league: 'Diğer Ligler', primaryColorHex: '000000', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'napoli', name: 'Napoli', league: 'Diğer Ligler', primaryColorHex: '12A0D7', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'roma', name: 'Roma', league: 'Diğer Ligler', primaryColorHex: '8E1F2F', secondaryColorHex: 'F19E00'),
-
-    // --- DİĞER LİGLER (Almanya - Bundesliga) ---
-    TeamModel(id: 'bayern', name: 'Bayern Münih', league: 'Diğer Ligler', primaryColorHex: 'DC052D', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'bvb', name: 'Borussia Dortmund', league: 'Diğer Ligler', primaryColorHex: 'FDE100', secondaryColorHex: '000000'),
-    TeamModel(id: 'leverkusen', name: 'Bayer Leverkusen', league: 'Diğer Ligler', primaryColorHex: '000000', secondaryColorHex: 'E32221'),
-
-    // --- DİĞER LİGLER (Fransa & Dünya) ---
-    TeamModel(id: 'psg', name: 'Paris Saint-Germain', league: 'Diğer Ligler', primaryColorHex: '004170', secondaryColorHex: 'DA291C'),
-    TeamModel(id: 'ajax', name: 'Ajax', league: 'Diğer Ligler', primaryColorHex: 'D2122E', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'benfica', name: 'Benfica', league: 'Diğer Ligler', primaryColorHex: 'E30613', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'sporting', name: 'Sporting CP', league: 'Diğer Ligler', primaryColorHex: '008057', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'porto', name: 'Porto', league: 'Diğer Ligler', primaryColorHex: '003882', secondaryColorHex: 'FFFFFF'),
-    TeamModel(id: 'intermiami', name: 'Inter Miami', league: 'Diğer Ligler', primaryColorHex: 'F7B5CD', secondaryColorHex: '231F20'),
-    TeamModel(id: 'alnassr', name: 'Al-Nassr', league: 'Diğer Ligler', primaryColorHex: 'FFDD00', secondaryColorHex: '002B7F'),
-  ];
 
   @override
   void dispose() {
@@ -154,32 +77,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTeamSelection(BuildContext context, AuthService authService) {
-    // If Firebase is not configured or unavailable, show default teams directly (prevent grey screen)
-    if (!authService.isFirebaseAvailable) {
-      return _buildTeamList(context, authService, defaultTeams);
-    }
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('teams').snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return _buildTeamList(context, authService, defaultTeams);
-        }
-
-        List<TeamModel> allTeams = [];
-        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-          try {
-            allTeams = snapshot.data!.docs.map((d) => TeamModel.fromMap(d.data() as Map<String, dynamic>, d.id)).toList();
-          } catch (_) {
-            allTeams = defaultTeams;
-          }
-        } else {
-          allTeams = defaultTeams;
-        }
-
-        return _buildTeamList(context, authService, allTeams);
-      },
-    );
+    final db = Provider.of<DatabaseService>(context);
+    return _buildTeamList(context, authService, db.allTeams);
   }
 
   Widget _buildTeamAvatar(Color primary, Color secondary) {
@@ -310,33 +209,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMainDashboard(BuildContext context, AuthService authService, String teamId) {
-    TeamModel? fallbackTeam = defaultTeams.where((t) => t.id == teamId).isNotEmpty
-        ? defaultTeams.firstWhere((t) => t.id == teamId)
-        : null;
-
-    if (fallbackTeam != null || !authService.isFirebaseAvailable) {
-      fallbackTeam ??= defaultTeams.first;
-      Color primary = Color(int.parse('0xFF${fallbackTeam.primaryColorHex}'));
-      Color secondary = Color(int.parse('0xFF${fallbackTeam.secondaryColorHex}'));
-      return _buildDashboardContent(context, authService, fallbackTeam.name, primary, secondary);
-    }
-
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('teams').doc(teamId).get(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data == null || snapshot.data!.data() == null) {
-          var defaultTeam = defaultTeams.first;
-          Color primary = Color(int.parse('0xFF${defaultTeam.primaryColorHex}'));
-          Color secondary = Color(int.parse('0xFF${defaultTeam.secondaryColorHex}'));
-          return _buildDashboardContent(context, authService, defaultTeam.name, primary, secondary);
-        }
-        
-        var teamData = snapshot.data!.data() as Map<String, dynamic>;
-        Color primary = Color(int.parse('0xFF${teamData['primaryColorHex']}'));
-        Color secondary = Color(int.parse('0xFF${teamData['secondaryColorHex']}'));
-        return _buildDashboardContent(context, authService, teamData['name'], primary, secondary);
-      },
-    );
+    final db = Provider.of<DatabaseService>(context);
+    final team = db.getTeamById(teamId) ?? db.allTeams.first;
+    Color primary = Color(int.parse('0xFF${team.primaryColorHex}'));
+    Color secondary = Color(int.parse('0xFF${team.secondaryColorHex}'));
+    return _buildDashboardContent(context, authService, team.name, primary, secondary);
   }
 
   Widget _buildDashboardContent(BuildContext context, AuthService authService, String teamName, Color primary, Color secondary) {

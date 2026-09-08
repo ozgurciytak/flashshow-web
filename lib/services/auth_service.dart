@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -241,6 +242,27 @@ class AuthService extends ChangeNotifier {
       await prefs.setString('user_email', email);
       if (uid != null) await prefs.setString('user_id', uid);
       if (role != null) await prefs.setString('user_role', role);
+
+      final usersJson = prefs.getString('registered_users');
+      List<dynamic> usersList = [];
+      if (usersJson != null) {
+        try {
+          usersList = jsonDecode(usersJson);
+        } catch (_) {}
+      }
+      final existingIndex = usersList.indexWhere((u) => u['email'] == email);
+      final userMap = {
+        'id': uid ?? 'local_${email.hashCode.abs()}',
+        'email': email,
+        'role': role ?? 'user',
+        'teamId': prefs.getString('team_id'),
+      };
+      if (existingIndex >= 0) {
+        usersList[existingIndex] = userMap;
+      } else {
+        usersList.add(userMap);
+      }
+      await prefs.setString('registered_users', jsonEncode(usersList));
     } catch (e) {
       // ignore
     }
@@ -284,6 +306,16 @@ class AuthService extends ChangeNotifier {
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('team_id', teamId);
+        final usersJson = prefs.getString('registered_users');
+        if (usersJson != null) {
+          List<dynamic> usersList = jsonDecode(usersJson);
+          for (var u in usersList) {
+            if (u['email'] == _currentUserModel!.email) {
+              u['teamId'] = teamId;
+            }
+          }
+          await prefs.setString('registered_users', jsonEncode(usersList));
+        }
       } catch (e) {
         // ignore
       }

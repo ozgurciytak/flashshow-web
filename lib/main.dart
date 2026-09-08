@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'services/auth_service.dart';
+import 'services/database_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -35,6 +36,7 @@ class FlashShowApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => DatabaseService()),
       ],
       child: MaterialApp(
         title: 'Flash Show',
