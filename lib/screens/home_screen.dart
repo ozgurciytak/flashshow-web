@@ -70,9 +70,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: (user?.teamId == null || user!.teamId!.isEmpty)
-          ? _buildTeamSelection(context, authService) 
-          : _buildMainDashboard(context, authService, user.teamId!),
+      body: SafeArea(
+        child: (user?.teamId == null || user!.teamId!.isEmpty)
+            ? _buildTeamSelection(context, authService) 
+            : _buildMainDashboard(context, authService, user.teamId!),
+      ),
     );
   }
 
@@ -216,17 +218,47 @@ class _HomeScreenState extends State<HomeScreen> {
     return _buildDashboardContent(context, authService, team.name, team.league, primary, secondary);
   }
 
+  void _launchShow(
+    BuildContext context,
+    String teamName,
+    String league,
+    Color primary,
+    Color secondary, {
+    bool useFlash = true,
+    bool useScreen = true,
+    bool withCountdown = false,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShowScreen(
+          teamName: teamName,
+          league: league,
+          primaryColor: primary,
+          secondaryColor: secondary,
+          useFlash: useFlash,
+          useScreen: useScreen,
+          withCountdown: withCountdown,
+        ),
+      ),
+    );
+  }
+
   Widget _buildDashboardContent(BuildContext context, AuthService authService, String teamName, String league, Color primary, Color secondary) {
     return Column(
       children: [
         _buildAdBanner(),
         Expanded(
-          child: Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const SizedBox(height: 8),
                 Text(
                   teamName,
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: primary),
                 ),
                 const SizedBox(height: 8),
@@ -257,12 +289,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
+                // Büyük Flaş Butonu (Dokununca Şovu Başlatır)
                 GestureDetector(
-                  onTap: () => _showOptionsDialog(context, teamName, league, primary, secondary),
+                  onTap: () => _launchShow(context, teamName, league, primary, secondary),
                   child: Container(
-                    width: 190,
-                    height: 190,
+                    width: 170,
+                    height: 170,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: primary,
@@ -272,18 +305,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     child: Center(
-                      child: Icon(Icons.flash_on, size: 80, color: secondary),
+                      child: Icon(Icons.flash_on, size: 75, color: secondary),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Text('start_show'.tr(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  icon: const Icon(Icons.swap_horiz, color: Colors.yellow, size: 20),
-                  label: Text('change_team'.tr(), style: const TextStyle(color: Colors.yellow, fontSize: 16)),
-                  onPressed: () => authService.clearTeam(),
+                const SizedBox(height: 24),
+                // Doğrudan Ekrandaki Büyük "ŞOVU BAŞLAT" Butonu
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.flash_on, color: Colors.black, size: 26),
+                    label: Text(
+                      'start_show'.tr(),
+                      style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.yellow,
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () => _launchShow(context, teamName, league, primary, secondary),
+                  ),
                 ),
+                const SizedBox(height: 12),
+                // Şov Seçenekleri & Takım Değiştir Butonları
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.tune, color: Colors.white70, size: 18),
+                      label: Text('show_options'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                      onPressed: () => _showOptionsDialog(context, teamName, league, primary, secondary),
+                    ),
+                    const SizedBox(width: 16),
+                    TextButton.icon(
+                      icon: const Icon(Icons.swap_horiz, color: Colors.yellow, size: 18),
+                      label: Text('change_team'.tr(), style: const TextStyle(color: Colors.yellow, fontSize: 14)),
+                      onPressed: () => authService.clearTeam(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -299,76 +362,94 @@ class _HomeScreenState extends State<HomeScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.grey[900],
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('show_options'.tr(), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'sync_subtext'.tr(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-                  SwitchListTile(
-                    title: Text('enable_flash'.tr(), style: const TextStyle(color: Colors.white)),
-                    subtitle: const TextStyle(color: Colors.white54, fontSize: 11) != null
-                        ? const Text('Arka kamera flaşı ritmik çakar', style: TextStyle(color: Colors.white54, fontSize: 11))
-                        : null,
-                    activeColor: Colors.yellow,
-                    value: useFlash,
-                    onChanged: (val) => setModalState(() => useFlash = val),
-                  ),
-                  SwitchListTile(
-                    title: Text('screen_visuals'.tr(), style: const TextStyle(color: Colors.white)),
-                    subtitle: const Text('Takım arması ve renkler ekranda parlar', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                    activeColor: Colors.yellow,
-                    value: useScreen,
-                    onChanged: (val) => setModalState(() => useScreen = val),
-                  ),
-                  SwitchListTile(
-                    title: Text('enable_countdown'.tr(), style: const TextStyle(color: Colors.white)),
-                    subtitle: const Text('3 saniye geri sayımdan sonra başlar', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                    activeColor: Colors.yellow,
-                    value: withCountdown,
-                    onChanged: (val) => setModalState(() => withCountdown = val),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.yellow,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            final bottomPadding = MediaQuery.of(ctx).padding.bottom;
+            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+            return SafeArea(
+              top: false,
+              bottom: true,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(24, 16, 24, bottomPadding + bottomInset + 36),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                    child: Text('start_show'.tr(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ShowScreen(
-                            teamName: teamName,
-                            league: league,
-                            primaryColor: primary, 
-                            secondaryColor: secondary,
+                    Text('show_options'.tr(), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'sync_subtext'.tr(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                    SwitchListTile(
+                      title: Text('enable_flash'.tr(), style: const TextStyle(color: Colors.white)),
+                      subtitle: const Text('Arka kamera flaşı ritmik çakar', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      activeColor: Colors.yellow,
+                      value: useFlash,
+                      onChanged: (val) => setModalState(() => useFlash = val),
+                    ),
+                    SwitchListTile(
+                      title: Text('screen_visuals'.tr(), style: const TextStyle(color: Colors.white)),
+                      subtitle: const Text('Takım arması ve renkler ekranda parlar', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      activeColor: Colors.yellow,
+                      value: useScreen,
+                      onChanged: (val) => setModalState(() => useScreen = val),
+                    ),
+                    SwitchListTile(
+                      title: Text('enable_countdown'.tr(), style: const TextStyle(color: Colors.white)),
+                      subtitle: const Text('3 saniye geri sayımdan sonra başlar', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      activeColor: Colors.yellow,
+                      value: withCountdown,
+                      onChanged: (val) => setModalState(() => withCountdown = val),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.flash_on, color: Colors.black),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.yellow,
+                          minimumSize: const Size(double.infinity, 52),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 4,
+                        ),
+                        label: Text('start_show'.tr(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _launchShow(
+                            context,
+                            teamName,
+                            league,
+                            primary,
+                            secondary,
                             useFlash: useFlash,
                             useScreen: useScreen,
                             withCountdown: withCountdown,
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
               ),
             );
           },
