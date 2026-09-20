@@ -30,5 +30,8 @@
   "countdown_ready": "Raise Your Phone Up!",
   "countdown_starting": "Choreography Starting...",
   "enable_countdown": "Start with Countdown (Choreography)",
-  "screen_visuals": "Team Crest & Screen Visuals"
+  "screen_visuals": "Flash Team Colors on Screen",
+  "skip_countdown": "Skip Countdown (Start Now)",
+  "sync_countdown_title": "SYNCHRONIZED COUNTDOWN",
+  "sync_countdown_sub": "All devices will start at the exact same millisecond"
 }

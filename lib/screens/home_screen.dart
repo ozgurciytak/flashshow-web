@@ -226,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Color secondary, {
     bool useFlash = true,
     bool useScreen = true,
-    bool withCountdown = false,
+    bool withCountdown = true,
   }) {
     Navigator.push(
       context,
@@ -358,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showOptionsDialog(BuildContext context, String teamName, String league, Color primary, Color secondary) {
     bool useFlash = true;
     bool useScreen = true;
-    bool withCountdown = false;
+    bool withCountdown = true;
 
     showModalBottomSheet(
       context: context,

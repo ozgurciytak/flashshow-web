@@ -30,5 +30,8 @@
   "countdown_ready": "Telefonunu Havaya Kaldır!",
   "countdown_starting": "Koreografi Başlıyor...",
   "enable_countdown": "Geri Sayımla Başlat (Koreografi)",
-  "screen_visuals": "Takım Arması ve Ekran Görseli"
+  "screen_visuals": "Takım Renklerini Ekranda Göster",
+  "skip_countdown": "Geri Sayımı Geç (Hemen Başla)",
+  "sync_countdown_title": "SENKRONİZE GERİ SAYIM",
+  "sync_countdown_sub": "Tüm cihazlar tam aynı salisede başlayacak"
 }
