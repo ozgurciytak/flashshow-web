@@ -226,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Color secondary, {
     bool useFlash = true,
     bool useScreen = true,
-    bool withCountdown = true,
+    bool withCountdown = false,
   }) {
     Navigator.push(
       context,
@@ -358,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showOptionsDialog(BuildContext context, String teamName, String league, Color primary, Color secondary) {
     bool useFlash = true;
     bool useScreen = true;
-    bool withCountdown = true;
+    bool withCountdown = false;
 
     showModalBottomSheet(
       context: context,
@@ -407,14 +407,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     SwitchListTile(
                       title: Text('screen_visuals'.tr(), style: const TextStyle(color: Colors.white)),
-                      subtitle: const Text('Takım arması ve renkler ekranda parlar', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      subtitle: const Text('Takım renkleri ekranda keskin şekilde parlar', style: TextStyle(color: Colors.white54, fontSize: 11)),
                       activeColor: Colors.yellow,
                       value: useScreen,
                       onChanged: (val) => setModalState(() => useScreen = val),
                     ),
                     SwitchListTile(
                       title: Text('enable_countdown'.tr(), style: const TextStyle(color: Colors.white)),
-                      subtitle: const Text('3 saniye geri sayımdan sonra başlar', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      subtitle: const Text('Ortak döngü başına kadar geri sayım yapar', style: TextStyle(color: Colors.white54, fontSize: 11)),
                       activeColor: Colors.yellow,
                       value: withCountdown,
                       onChanged: (val) => setModalState(() => withCountdown = val),

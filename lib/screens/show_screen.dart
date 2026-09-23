@@ -20,7 +20,7 @@ class ShowScreen extends StatefulWidget {
     this.league,
     this.useFlash = true,
     this.useScreen = true,
-    this.withCountdown = true,
+    this.withCountdown = false,
   }) : super(key: key);
 
   @override
@@ -28,14 +28,17 @@ class ShowScreen extends StatefulWidget {
 }
 
 class _ShowScreenState extends State<ShowScreen> {
+  static const int _kCyclePeriodMs = 8000;
+
   // Senkronizasyon Durumu
-  bool _isPhase1 = true; // true: Primary Color + Flash ON; false: Secondary Color + Flash OFF
+  late bool _isPhase1; // true: Primary Color + Flash ON; false: Secondary Color + Flash OFF
   bool _isTorchOn = false;
   bool _isTorchAvailable = false;
   bool _isTorchInProgress = false;
+  bool? _pendingTorchState;
   Timer? _syncTimer;
 
-  // Ortak Küresel Geri Sayım Durumu
+  // İsteğe Bağlı Küresel Geri Sayım Durumu
   bool _isCountdownActive = false;
   int _targetStartEpochMs = 0;
   int _secondsLeft = 3;
@@ -44,8 +47,15 @@ class _ShowScreenState extends State<ShowScreen> {
   @override
   void initState() {
     super.initState();
+
+    // 1. İLK KAREDE (Frame 0) Doğrudan Dünya Saatine Göre Fazı Belirle (Sıfır Gecikme)
+    final int nowMs = DateTime.now().millisecondsSinceEpoch;
+    _isPhase1 = _calculateIsPhase1(nowMs % _kCyclePeriodMs);
+
+    // 2. Flaş Donanımını Hazırla
     _initTorch();
 
+    // 3. Şovu Başlat
     if (widget.withCountdown) {
       _startGlobalCountdown();
     } else {
@@ -57,21 +67,25 @@ class _ShowScreenState extends State<ShowScreen> {
     if (widget.useFlash) {
       try {
         _isTorchAvailable = await TorchLight.isTorchAvailable();
+        // Flaş donanımı hazır olur olmaz, o anki küresel faza anında kilitle!
+        if (_isTorchAvailable && mounted && !_isCountdownActive) {
+          final int nowMs = DateTime.now().millisecondsSinceEpoch;
+          final bool currentPhase = _calculateIsPhase1(nowMs % _kCyclePeriodMs);
+          _applyTorch(currentPhase);
+        }
       } catch (_) {
         _isTorchAvailable = false;
       }
     }
   }
 
-  /// Ortak Küresel Geri Sayım
-  /// Farklı cihazlar 1-2 saniye arayla "Şovu Başlat" dese bile
-  /// dünya saatindeki aynı ortak saniyeye (Epoch Slot) kilitlenirler ve tam aynı salisede başlarlar.
+  /// İsteğe Bağlı Ortak Küresel Geri Sayım
+  /// Kullanıcı geri sayımla başlatmayı seçtiyse, tam bir sonraki 8 saniyelik döngü başına kilitler.
   void _startGlobalCountdown() {
     final int now = DateTime.now().millisecondsSinceEpoch;
-    // 4 saniyelik küresel dilimlere kilitlen
-    int slot = ((now ~/ 4000) + 1) * 4000;
-    if (slot - now < 1200) {
-      slot += 4000; // Kullanıcıya en az 1.2 saniye hazırlanma süresi tanı
+    int slot = ((now ~/ _kCyclePeriodMs) + 1) * _kCyclePeriodMs;
+    if (slot - now < 2000) {
+      slot += _kCyclePeriodMs;
     }
     _targetStartEpochMs = slot;
 
@@ -106,10 +120,14 @@ class _ShowScreenState extends State<ShowScreen> {
   }
 
   /// 8 Saniyelik Hızlanan Koreografi Döngüsü (8000 ms)
-  /// Aşama 1 (0 - 2400 ms): Ağır & Tok Başlangıç (800ms periyot: 400ms 1. Renk+Flaş / 400ms 2. Renk)
-  /// Aşama 2 (2400 - 4800 ms): Orta Tempo (480ms periyot: 240ms 1. Renk+Flaş / 240ms 2. Renk)
-  /// Aşama 3 (4800 - 6600 ms): Yüksek Hız (300ms periyot: 150ms 1. Renk+Flaş / 150ms 2. Renk)
-  /// Aşama 4 (6600 - 8000 ms): ÇILGIN TURBO STROBE (140ms periyot: 70ms 1. Renk+Flaş / 70ms 2. Renk)
+  /// Dünya saatine (Epoch ms % 8000) kilitlidir.
+  /// Farklı saniyelerde, dakikalarda veya saatlerde girilse bile
+  /// tüm cihazlar bu 8 saniyenin tam aynı milisaniyesini yaşar!
+  ///
+  /// - Aşama 1 (0 - 2400 ms): Tok & Güçlü Giriş (800ms periyot: 400ms 1. Renk+Flaş / 400ms 2. Renk)
+  /// - Aşama 2 (2400 - 4800 ms): Orta Tempo (480ms periyot: 240ms 1. Renk+Flaş / 240ms 2. Renk)
+  /// - Aşama 3 (4800 - 6600 ms): Yüksek Hız (300ms periyot: 150ms 1. Renk+Flaş / 150ms 2. Renk)
+  /// - Aşama 4 (6600 - 8000 ms): ÇILGIN TURBO STROBE (200ms periyot: 100ms 1. Renk+Flaş / 100ms 2. Renk)
   bool _calculateIsPhase1(int cycleMs) {
     if (cycleMs < 2400) {
       return (cycleMs % 800) < 400;
@@ -121,7 +139,7 @@ class _ShowScreenState extends State<ShowScreen> {
       return (rel % 300) < 150;
     } else {
       int rel = cycleMs - 6600;
-      return (rel % 140) < 70;
+      return (rel % 200) < 100;
     }
   }
 
@@ -142,7 +160,7 @@ class _ShowScreenState extends State<ShowScreen> {
       return remInPulse < untilPhaseEnd ? remInPulse : untilPhaseEnd;
     } else {
       int rel = cycleMs - 6600;
-      int remInPulse = 70 - (rel % 70);
+      int remInPulse = 100 - (rel % 100);
       int untilPhaseEnd = 8000 - cycleMs;
       return remInPulse < untilPhaseEnd ? remInPulse : untilPhaseEnd;
     }
@@ -156,7 +174,7 @@ class _ShowScreenState extends State<ShowScreen> {
     if (!mounted || _isCountdownActive) return;
 
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
-    final int cycleMs = nowMs % 8000;
+    final int cycleMs = nowMs % _kCyclePeriodMs;
     final bool targetPhase1 = _calculateIsPhase1(cycleMs);
 
     if (_isPhase1 != targetPhase1) {
@@ -167,18 +185,27 @@ class _ShowScreenState extends State<ShowScreen> {
 
     _applyTorch(targetPhase1);
 
+    // Bir sonraki vuruşa kalan süreyi hesapla (Sıfır kayma / Drift-free)
     int msUntilNext = _calculateMsUntilNext(cycleMs);
     if (msUntilNext <= 0) msUntilNext = 50;
 
     _syncTimer = Timer(Duration(milliseconds: msUntilNext), _onSyncBeat);
   }
 
+  /// Kuyruklu & Donanım Korumalı Flaş Kontrolü
+  /// Kamera HAL işlemdeyken gelen istekleri düşürmez, bittiği anda en son durumu anında uygular.
   void _applyTorch(bool targetOn) async {
     if (!_isTorchAvailable || !widget.useFlash) return;
-    if (_isTorchOn == targetOn) return;
-    if (_isTorchInProgress) return; // Donanım çakışmasını önle
+    if (_isTorchOn == targetOn && _pendingTorchState == null) return;
+
+    if (_isTorchInProgress) {
+      _pendingTorchState = targetOn;
+      return;
+    }
 
     _isTorchInProgress = true;
+    _pendingTorchState = null;
+
     try {
       if (targetOn) {
         await TorchLight.enableTorch();
@@ -188,9 +215,14 @@ class _ShowScreenState extends State<ShowScreen> {
         _isTorchOn = false;
       }
     } catch (_) {
-      // Donanım meşguliyet hatasını güvenle yut
+      // Donanım hatasını yut
     } finally {
       _isTorchInProgress = false;
+      if (_pendingTorchState != null && _pendingTorchState != _isTorchOn) {
+        final nextState = _pendingTorchState!;
+        _pendingTorchState = null;
+        _applyTorch(nextState);
+      }
     }
   }
 
@@ -260,7 +292,6 @@ class _ShowScreenState extends State<ShowScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            // Büyük Geri Sayım Sayacı
             Container(
               width: 140,
               height: 140,
@@ -296,7 +327,6 @@ class _ShowScreenState extends State<ShowScreen> {
               ),
             ),
             const SizedBox(height: 36),
-            // Geri sayımı beklemek istemeyenler için hemen başla butonu
             OutlinedButton(
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.yellow,
@@ -322,22 +352,20 @@ class _ShowScreenState extends State<ShowScreen> {
     );
   }
 
-  /// SAF TAKIM RENKLERİ ŞOV EKRANI (Logo Yok - Sadece Ekrana Yayılan Takım Renkleri)
+  /// SAF TAKIM RENKLERİ ŞOV EKRANI (Logo Yok - Keskin ve Canlı Renk Patlaması)
   Widget _buildPureColorShowView() {
-    // 1. Fazda Birincil Renk, 2. Fazda İkincil Renk tüm ekranı kaplar
+    // 1. Fazda Birincil Renk, 2. Fazda İkincil Renk tam ekran görünür (Gecikmesiz, anlık geçiş)
     Color currentColor = widget.useScreen
         ? (_isPhase1 ? widget.primaryColor : widget.secondaryColor)
         : Colors.black;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 60),
+    return Container(
       width: double.infinity,
       height: double.infinity,
       color: currentColor,
       child: SafeArea(
         child: Stack(
           children: [
-            // Ekranda hiçbir logo veya amblem yok; sadece altta çok sade durdurma uyarısı
             Positioned(
               bottom: 30,
               left: 0,
