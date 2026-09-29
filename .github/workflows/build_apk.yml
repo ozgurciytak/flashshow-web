@@ -35,8 +35,8 @@ jobs:
 
       - name: Configure Android minSdkVersion & Permissions
         run: |
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle || true
-          sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle || true
+          sed -i 's/minSdkVersion .*/minSdkVersion 23/' android/app/build.gradle || true
+          sed -i 's/minSdk = .*/minSdk = 23/' android/app/build.gradle || true
           sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle || true
           sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.24"/' android/build.gradle || true
           sed -i '/<application/i <uses-permission android:name="android.permission.CAMERA" \/>\n<uses-feature android:name="android.hardware.camera.flash" android:required="false" \/>' android/app/src/main/AndroidManifest.xml || true
