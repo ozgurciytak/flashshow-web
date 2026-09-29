@@ -5,6 +5,9 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,11 +29,15 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Create Android Project skeleton if missing
+      - name: Recreate Android Project files
         run: |
-          if [ ! -d "android" ]; then
-            flutter create . --org com.flashshow.app --project-name flashshow --platforms android
-          fi
+          flutter create . --org com.flashshow.app --project-name flashshow --platforms android
+
+      - name: Configure Android minSdkVersion & Permissions
+        run: |
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle || true
+          sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle || true
+          sed -i '/<application/i <uses-permission android:name="android.permission.CAMERA" \/>\n<uses-feature android:name="android.hardware.camera.flash" android:required="false" \/>' android/app/src/main/AndroidManifest.xml || true
 
       - name: Install dependencies
         run: flutter pub get
@@ -46,7 +53,7 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Flash Show v1.0.${{ github.run_number }}
