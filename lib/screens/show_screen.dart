@@ -41,7 +41,7 @@ class _ShowScreenState extends State<ShowScreen> {
   // İsteğe Bağlı Küresel Geri Sayım Durumu
   bool _isCountdownActive = false;
   int _targetStartEpochMs = 0;
-  int _secondsLeft = 3;
+  int _secondsLeft = 0;
   Timer? _countdownTimer;
 
   @override
@@ -56,11 +56,8 @@ class _ShowScreenState extends State<ShowScreen> {
     _initTorch();
 
     // 3. Şovu Başlat
-    if (widget.withCountdown) {
-      _startGlobalCountdown();
-    } else {
-      _startMasterSync();
-    }
+    // Kullanıcı girdiğinde doğrudan veya geri sayımla ortak tek dakikaya kilitlenir
+    _startGlobalOddMinuteCountdown();
   }
 
   void _initTorch() async {
@@ -79,19 +76,47 @@ class _ShowScreenState extends State<ShowScreen> {
     }
   }
 
-  /// İsteğe Bağlı Ortak Küresel Geri Sayım
-  /// Kullanıcı geri sayımla başlatmayı seçtiyse, tam bir sonraki 8 saniyelik döngü başına kilitler.
-  void _startGlobalCountdown() {
-    final int now = DateTime.now().millisecondsSinceEpoch;
-    int slot = ((now ~/ _kCyclePeriodMs) + 1) * _kCyclePeriodMs;
-    if (slot - now < 2000) {
-      slot += _kCyclePeriodMs;
+  /// Ortak Tek Dakika (Odd Minute) Senkronize Başlatma Mantığı:
+  /// Kullanıcı girdikten itibaren en az 2 dakika sonraki İLK TEK DAKİKAYI hedefler.
+  /// Örneğin:
+  /// - 22:32:10'da giren -> 22:35:00'e kilitlenir (2 dk 50 sn geri sayım)
+  /// - 22:33:05'te giren -> 22:35:00'e kilitlenir (1 dk 55 sn geri sayım)
+  /// Böylece her iki kullanıcı da tam olarak 22:35:00.000 anında şovu aynı anda başlatır!
+  DateTime _calculateNextTargetOddMinute(DateTime now) {
+    DateTime candidate = now.add(const Duration(minutes: 2));
+    // Saniyeleri ve milisaniyeleri sıfırla (tam dakika başına yuvarla)
+    int candMinute = candidate.minute;
+    if (candMinute % 2 == 0) {
+      // Çift dakika ise bir sonraki tek dakikaya ilerlet
+      candidate = candidate.add(const Duration(minutes: 1));
     }
-    _targetStartEpochMs = slot;
+    return DateTime(
+      candidate.year,
+      candidate.month,
+      candidate.day,
+      candidate.hour,
+      candidate.minute,
+      0,
+      0,
+    );
+  }
+
+  void _startGlobalOddMinuteCountdown() {
+    final DateTime now = DateTime.now();
+    final DateTime targetTime = _calculateNextTargetOddMinute(now);
+    _targetStartEpochMs = targetTime.millisecondsSinceEpoch;
+
+    final int diffMs = _targetStartEpochMs - now.millisecondsSinceEpoch;
+    
+    if (diffMs <= 0) {
+      _isCountdownActive = false;
+      _startMasterSync();
+      return;
+    }
 
     setState(() {
       _isCountdownActive = true;
-      _secondsLeft = ((_targetStartEpochMs - now) / 1000).ceil();
+      _secondsLeft = (diffMs / 1000).ceil();
     });
 
     _countdownTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
@@ -308,9 +333,11 @@ class _ShowScreenState extends State<ShowScreen> {
               ),
               child: Center(
                 child: Text(
-                  '$_secondsLeft',
-                  style: const TextStyle(
-                    fontSize: 70,
+                  _secondsLeft >= 60
+                      ? '${(_secondsLeft ~/ 60).toString().padLeft(2, '0')}:${(_secondsLeft % 60).toString().padLeft(2, '0')}'
+                      : '$_secondsLeft',
+                  style: TextStyle(
+                    fontSize: _secondsLeft >= 60 ? 38 : 70,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
