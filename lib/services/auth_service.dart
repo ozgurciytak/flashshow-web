@@ -1,53 +1,23 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService extends ChangeNotifier {
-  FirebaseAuth? _auth;
-  FirebaseFirestore? _firestore;
-
   UserModel? _currentUserModel;
   bool _isGuest = false;
   bool _isLocalAuth = false;
 
   UserModel? get currentUserModel => _currentUserModel;
-  bool get isAuthenticated => _isGuest || _isLocalAuth || (_auth?.currentUser != null);
+  bool get isAuthenticated => _isGuest || _isLocalAuth || _currentUserModel != null;
   bool get isAdmin => _currentUserModel?.role == 'admin';
   bool get isGuest => _isGuest;
-  bool get isFirebaseAvailable => Firebase.apps.isNotEmpty && _auth != null;
 
   AuthService() {
     _init();
   }
 
   Future<void> _init() async {
-    // 1. Try initializing Firebase safely if configured
-    try {
-      if (Firebase.apps.isNotEmpty) {
-        _auth = FirebaseAuth.instance;
-        _firestore = FirebaseFirestore.instance;
-        _auth?.authStateChanges().listen((User? user) async {
-          if (user != null) {
-            _isGuest = false;
-            _isLocalAuth = false;
-            await _fetchUserModel(user.uid);
-          } else if (!_isGuest && !_isLocalAuth) {
-            _currentUserModel = null;
-          }
-          notifyListeners();
-        });
-      }
-    } catch (e) {
-      print('Firebase erişim hatası: $e');
-      _auth = null;
-      _firestore = null;
-    }
-
-    // 2. Restore local saved session if any
     try {
       final prefs = await SharedPreferences.getInstance();
       final isGuestSaved = prefs.getBool('is_guest') ?? false;
@@ -63,7 +33,7 @@ class AuthService extends ChangeNotifier {
           teamId: savedTeamId,
         );
         notifyListeners();
-      } else if (isLoggedIn && (_auth?.currentUser == null)) {
+      } else if (isLoggedIn) {
         final email = prefs.getString('user_email') ?? 'kullanici@flashshow.com';
         final uid = prefs.getString('user_id') ?? 'local_user';
         final role = prefs.getString('user_role') ?? 'user';
@@ -97,22 +67,7 @@ class AuthService extends ChangeNotifier {
       await prefs.setBool('is_guest', true);
       await prefs.setBool('is_logged_in', false);
       await prefs.remove('team_id');
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  Future<void> _fetchUserModel(String uid) async {
-    try {
-      if (_firestore != null) {
-        DocumentSnapshot doc = await _firestore!.collection('users').doc(uid).get();
-        if (doc.exists) {
-          _currentUserModel = UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-        }
-      }
-    } catch (e) {
-      print('Kullanıcı bilgisi alınamadı: $e');
-    }
+    } catch (_) {}
   }
 
   Future<String?> signIn(String email, String password) async {
@@ -120,27 +75,6 @@ class AuthService extends ChangeNotifier {
       return 'Lütfen e-posta ve şifrenizi girin.';
     }
 
-    // Attempt Firebase Sign In if available
-    if (isFirebaseAvailable) {
-      try {
-        await _auth!.signInWithEmailAndPassword(email: email, password: password);
-        _isGuest = false;
-        _isLocalAuth = false;
-        _saveLocalSession(email: email, isLocal: false);
-        return null; // Başarılı
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'user-not-found') {
-          return 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.';
-        } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-          return 'Hatalı şifre veya e-posta.';
-        }
-        return e.message ?? 'Giriş yapılamadı.';
-      } catch (e) {
-        print('Firebase giriş hatası: $e');
-      }
-    }
-
-    // Fallback: Local offline authentication
     _isGuest = false;
     _isLocalAuth = true;
     final uid = 'user_${email.hashCode.abs()}';
@@ -159,7 +93,7 @@ class AuthService extends ChangeNotifier {
       teamId: savedTeam,
     );
 
-    _saveLocalSession(email: email, uid: uid, role: role, isLocal: true);
+    await _saveLocalSession(email: email, uid: uid, role: role);
     notifyListeners();
     return null; // Başarılı
   }
@@ -175,43 +109,6 @@ class AuthService extends ChangeNotifier {
       return 'Şifre en az 6 karakter olmalıdır.';
     }
 
-    // Attempt Firebase Sign Up if available
-    if (isFirebaseAvailable) {
-      try {
-        UserCredential cred = await _auth!.createUserWithEmailAndPassword(
-          email: email, 
-          password: password,
-        );
-        if (cred.user != null && _firestore != null) {
-          try {
-            await _firestore!.collection('users').doc(cred.user!.uid).set({
-              'email': email,
-              'role': 'user',
-              'teamId': null,
-            });
-          } catch (e) {
-            print('Firestore kullanıcı kaydı hatası: $e');
-          }
-        }
-        _isGuest = false;
-        _isLocalAuth = false;
-        _saveLocalSession(email: email, uid: cred.user?.uid, isLocal: false);
-        return null; // Başarılı
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'email-already-in-use') {
-          return 'Bu e-posta adresi zaten kullanımda.';
-        } else if (e.code == 'weak-password') {
-          return 'Şifre çok zayıf (en az 6 karakter).';
-        } else if (e.code == 'invalid-email') {
-          return 'Geçersiz e-posta formatı.';
-        }
-        return e.message ?? 'Kayıt sırasında bir hata oluştu.';
-      } catch (e) {
-        print('Firebase kayıt hatası: $e');
-      }
-    }
-
-    // Fallback: Local offline registration
     _isGuest = false;
     _isLocalAuth = true;
     final uid = 'local_${DateTime.now().millisecondsSinceEpoch}';
@@ -224,7 +121,7 @@ class AuthService extends ChangeNotifier {
       teamId: null,
     );
 
-    _saveLocalSession(email: email, uid: uid, role: role, isLocal: true);
+    await _saveLocalSession(email: email, uid: uid, role: role);
     notifyListeners();
     return null; // Başarılı
   }
@@ -232,8 +129,7 @@ class AuthService extends ChangeNotifier {
   Future<void> _saveLocalSession({
     required String email, 
     String? uid, 
-    String? role, 
-    required bool isLocal,
+    String? role,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -263,9 +159,7 @@ class AuthService extends ChangeNotifier {
         usersList.add(userMap);
       }
       await prefs.setString('registered_users', jsonEncode(usersList));
-    } catch (e) {
-      // ignore
-    }
+    } catch (_) {}
   }
 
   Future<void> signOut() async {
@@ -281,15 +175,8 @@ class AuthService extends ChangeNotifier {
       await prefs.remove('user_id');
       await prefs.remove('user_role');
       await prefs.remove('team_id');
-    } catch (e) {
-      // ignore
-    }
+    } catch (_) {}
 
-    try {
-      await _auth?.signOut();
-    } catch (e) {
-      // ignore
-    }
     notifyListeners();
   }
 
@@ -302,7 +189,6 @@ class AuthService extends ChangeNotifier {
         role: _currentUserModel!.role,
       );
 
-      // Save locally
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('team_id', teamId);
@@ -316,20 +202,8 @@ class AuthService extends ChangeNotifier {
           }
           await prefs.setString('registered_users', jsonEncode(usersList));
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (_) {}
 
-      // Save to Firestore if available
-      if (!_isGuest && !_isLocalAuth && _firestore != null && _auth?.currentUser != null) {
-        try {
-          await _firestore!.collection('users').doc(_auth!.currentUser!.uid).update({
-            'teamId': teamId,
-          });
-        } catch (e) {
-          print('Takım güncellenemedi: $e');
-        }
-      }
       notifyListeners();
     }
   }
@@ -346,19 +220,8 @@ class AuthService extends ChangeNotifier {
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('team_id');
-      } catch (e) {
-        // ignore
-      }
+      } catch (_) {}
 
-      if (!_isGuest && !_isLocalAuth && _firestore != null && _auth?.currentUser != null) {
-        try {
-          await _firestore!.collection('users').doc(_auth!.currentUser!.uid).update({
-            'teamId': null,
-          });
-        } catch (e) {
-          // ignore
-        }
-      }
       notifyListeners();
     }
   }
