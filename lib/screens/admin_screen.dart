@@ -443,7 +443,7 @@ class EventsAdminTab extends StatelessWidget {
             leading: Icon(ev.eventType == 'match' ? Icons.sports_soccer : Icons.celebration, color: Colors.yellow),
             title: Text(ev.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             subtitle: Text(
-              '📍 ${ev.locationCity} ${ev.venueName != null ? "• " + ev.venueName! : ""}\n👥 Onaylı Katılımcı: $participantCount kişi | ⏳ Bekleyen İstek: $pendingCount',
+              '📍 ${ev.locationCity}${ev.venueName != null ? ' • ${ev.venueName}' : ''}\n👥 Onaylı Katılımcı: $participantCount kişi | ⏳ Bekleyen İstek: $pendingCount',
               style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.3),
             ),
             isThreeLine: true,

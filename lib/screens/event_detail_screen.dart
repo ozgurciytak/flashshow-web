@@ -246,7 +246,7 @@ Katılmak için uygulamayı açıp onay isteği gönderin.''';
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            '${event.locationCity}${event.venueName != null ? " • ${event.venueName}" : ""}',
+                            '${event.locationCity}${event.venueName != null ? ' • ${event.venueName}' : ''}',
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
                           ),
                         ),

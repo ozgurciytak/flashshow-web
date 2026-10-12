@@ -198,7 +198,9 @@ class _EventsScreenState extends State<EventsScreen> {
                                     const Icon(Icons.location_on, color: Colors.white54, size: 14),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '${event.locationCity}${event.venueName != null ? " • ${event.venueName}" : ""}',
+                                      event.venueName != null
+                                          ? '${event.locationCity} • ${event.venueName}'
+                                          : event.locationCity,
                                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                                     ),
                                   ],
