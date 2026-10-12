@@ -331,6 +331,16 @@ class DatabaseService extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Admin tarafından kullanıcı silme
+  Future<void> deleteUser(String userId) async {
+    _users.removeWhere((u) => u.id == userId);
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('registered_users', jsonEncode(_users.map((u) => u.toMap()).toList()));
+    } catch (_) {}
+  }
+
   // --- REKLAMLAR ---
   List<AdModel> get ads => _ads;
   List<AdModel> get activeAds => _ads.where((a) => a.isActive).toList();
