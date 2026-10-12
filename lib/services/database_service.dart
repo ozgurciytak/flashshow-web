@@ -1,9 +1,10 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/team_model.dart';
 import '../models/user_model.dart';
 import '../models/ad_model.dart';
+import '../models/event_model.dart';
 
 class DatabaseService extends ChangeNotifier {
   // Sabit (Fixed) Süper Lig ve Diğer Ligler Takımları
@@ -78,14 +79,9 @@ class DatabaseService extends ChangeNotifier {
 
   List<TeamModel> _customTeams = [];
   List<UserModel> _users = [];
-  List<AdModel> _ads = [
-    AdModel(
-      id: 'default_ad',
-      imageUrl: '',
-      targetUrl: 'https://flashshow.app',
-      isActive: true,
-    ),
-  ];
+  List<AdModel> _ads = [];
+  List<EventModel> _events = [];
+  Map<String, int> _teamSupportCounts = {}; // Takım ID -> İzlenen reklam sayısı
 
   DatabaseService() {
     _loadFromLocal();
@@ -107,12 +103,100 @@ class DatabaseService extends ChangeNotifier {
         _users = decodedUsers.map((m) => UserModel.fromMap(m as Map<String, dynamic>, m['id'] ?? '')).toList();
       }
 
+      final adsJson = prefs.getString('app_ads');
+      if (adsJson != null) {
+        final List<dynamic> decodedAds = jsonDecode(adsJson);
+        _ads = decodedAds.map((m) => AdModel.fromMap(m as Map<String, dynamic>, m['id'] ?? '')).toList();
+      } else {
+        // Varsayılan reklamlar: Hem Google Ads hem de Sponsor Reklamı örneği
+        _ads = [
+          AdModel(
+            id: 'google_ad_1',
+            title: 'Google AdMob Ödüllü Reklam',
+            imageUrl: '',
+            targetUrl: 'https://google.com/admob',
+            type: 'google',
+            isActive: true,
+            rewardSeconds: 15,
+          ),
+          AdModel(
+            id: 'sponsor_ad_1',
+            title: 'Flash Show Resmi Sponsoru',
+            imageUrl: '',
+            targetUrl: 'https://flashshow.app',
+            type: 'sponsor',
+            isActive: true,
+            rewardSeconds: 15,
+          ),
+        ];
+        _saveAdsToPrefs();
+      }
+
+      final eventsJson = prefs.getString('app_events');
+      if (eventsJson != null) {
+        final List<dynamic> decodedEvents = jsonDecode(eventsJson);
+        _events = decodedEvents.map((m) => EventModel.fromMap(m as Map<String, dynamic>, m['id'] ?? '')).toList();
+      } else {
+        // Varsayılan örnek etkinlikler (Kullanıcılar ilk açışta görebilsin)
+        _events = [
+          EventModel(
+            id: 'demo_event_1',
+            title: 'Süper Lig Derbi Flash Şov Koreografisi',
+            description: 'Stadyumda tüm tribün tek dakikada flaş şovla aydınlanıyor!',
+            eventType: 'match',
+            teamId: 'gs',
+            opponentTeamId: 'fb',
+            locationCity: 'İstanbul',
+            venueName: 'Rams Park',
+            eventDateTime: DateTime.now().add(const Duration(hours: 3)),
+            creatorUserId: 'admin_user',
+            creatorEmail: 'derbi@flashshow.com',
+            participantUserIds: ['admin_user', 'user_1', 'user_2'],
+          ),
+          EventModel(
+            id: 'demo_event_2',
+            title: 'Kadıköy Maç Önü Coşku Buluşması',
+            description: 'Maç öncesi meydanda toplanıp senkronize flaş şov yapıyoruz.',
+            eventType: 'match',
+            teamId: 'fb',
+            opponentTeamId: 'gs',
+            locationCity: 'İstanbul',
+            venueName: 'Kadıköy Meydanı',
+            eventDateTime: DateTime.now().add(const Duration(hours: 4)),
+            creatorUserId: 'fener_fan',
+            creatorEmail: 'fener@flashshow.com',
+            participantUserIds: ['fener_fan'],
+          ),
+          EventModel(
+            id: 'demo_event_3',
+            title: 'Şampiyonluk Kutlaması & Parti Şovu',
+            description: 'Müzik eşliğinde hep birlikte flaş ritmi oluşturuyoruz.',
+            eventType: 'entertainment',
+            teamId: null,
+            locationCity: 'İzmir',
+            venueName: 'Kordon Boyu',
+            eventDateTime: DateTime.now().add(const Duration(hours: 6)),
+            creatorUserId: 'izmir_fan',
+            creatorEmail: 'parti@flashshow.com',
+            participantUserIds: ['izmir_fan'],
+          ),
+        ];
+        _saveEventsToPrefs();
+      }
+
+      final supportJson = prefs.getString('team_support_counts');
+      if (supportJson != null) {
+        final Map<String, dynamic> decodedSupport = jsonDecode(supportJson);
+        _teamSupportCounts = decodedSupport.map((k, v) => MapEntry(k, v as int));
+      }
+
       notifyListeners();
     } catch (e) {
-      print('Yerel veritabanı yükleme hatası: ');
+      print('Yerel veritabanı yükleme hatası: $e');
     }
   }
 
+  // --- TAKIMLAR ---
   List<TeamModel> get allTeams => [..._fixedTeams, ..._customTeams];
 
   List<String> get leagues {
@@ -158,7 +242,7 @@ class DatabaseService extends ChangeNotifier {
       }).toList());
       await prefs.setString('custom_teams', encoded);
     } catch (e) {
-      print('Takım kaydedilemedi: ');
+      print('Takım kaydedilemedi: $e');
     }
   }
 
@@ -176,10 +260,11 @@ class DatabaseService extends ChangeNotifier {
       }).toList());
       await prefs.setString('custom_teams', encoded);
     } catch (e) {
-      print('Takım silinemedi: ');
+      print('Takım silinemedi: $e');
     }
   }
 
+  // --- KULLANICILAR ---
   List<UserModel> get users => _users;
 
   Future<void> saveUser(UserModel user) async {
@@ -193,17 +278,228 @@ class DatabaseService extends ChangeNotifier {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final encoded = jsonEncode(_users.map((u) => {
-        'id': u.id,
-        'email': u.email,
-        'role': u.role,
-        'teamId': u.teamId,
-      }).toList());
+      final encoded = jsonEncode(_users.map((u) => u.toMap()).toList());
       await prefs.setString('registered_users', encoded);
     } catch (e) {
-      print('Kullanıcı kaydedilemedi: ');
+      print('Kullanıcı kaydedilemedi: $e');
     }
   }
 
+  /// Admin tarafından kullanıcının hesabını askıya alma / kaldırma
+  Future<void> toggleUserSuspension(String userId) async {
+    final index = _users.indexWhere((u) => u.id == userId);
+    if (index >= 0) {
+      final updated = _users[index].copyWith(isSuspended: !_users[index].isSuspended);
+      _users[index] = updated;
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('registered_users', jsonEncode(_users.map((u) => u.toMap()).toList()));
+      } catch (_) {}
+    }
+  }
+
+  /// Admin tarafından veya kullanıcı isteğiyle kullanıcı silme
+  Future<void> deleteUser(String userId) async {
+    _users.removeWhere((u) => u.id == userId);
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('registered_users', jsonEncode(_users.map((u) => u.toMap()).toList()));
+    } catch (_) {}
+  }
+
+  // --- REKLAMLAR ---
   List<AdModel> get ads => _ads;
+  List<AdModel> get activeAds => _ads.where((a) => a.isActive).toList();
+
+  Future<void> addAd(AdModel ad) async {
+    _ads.add(ad);
+    notifyListeners();
+    await _saveAdsToPrefs();
+  }
+
+  Future<void> updateAd(AdModel ad) async {
+    final idx = _ads.indexWhere((a) => a.id == ad.id);
+    if (idx >= 0) {
+      _ads[idx] = ad;
+      notifyListeners();
+      await _saveAdsToPrefs();
+    }
+  }
+
+  Future<void> deleteAd(String id) async {
+    _ads.removeWhere((a) => a.id == id);
+    notifyListeners();
+    await _saveAdsToPrefs();
+  }
+
+  Future<void> _saveAdsToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(_ads.map((a) => a.toMap()).toList());
+      await prefs.setString('app_ads', encoded);
+    } catch (e) {
+      print('Reklamlar kaydedilemedi: $e');
+    }
+  }
+
+  // --- TAKIMA DESTEK OL & REKLAM İZLEME ---
+  int getSupportCount(String teamId) {
+    return _teamSupportCounts[teamId] ?? 0;
+  }
+
+  /// Takımı tutan kayıtlı üye sayısı
+  int getTeamMemberCount(String teamId) {
+    return _users.where((u) => u.teamId == teamId).length;
+  }
+
+  /// Toplam reklam izlenme sayısı (Tüm reklamlar)
+  int get totalAdViews {
+    return _ads.fold<int>(0, (sum, ad) => sum + ad.viewCount);
+  }
+
+  /// Toplam etkinlik katılımcı sayısı
+  int get totalEventParticipants {
+    return _events.fold<int>(0, (sum, ev) => sum + ev.participantUserIds.length);
+  }
+
+  Future<void> recordAdSupport(String teamId, {String? adId}) async {
+    final current = _teamSupportCounts[teamId] ?? 0;
+    _teamSupportCounts[teamId] = current + 1;
+
+    // İlgili reklamın viewCount'unu artır
+    if (adId != null) {
+      final adIdx = _ads.indexWhere((a) => a.id == adId);
+      if (adIdx >= 0) {
+        _ads[adIdx] = _ads[adIdx].copyWith(viewCount: _ads[adIdx].viewCount + 1);
+        await _saveAdsToPrefs();
+      }
+    } else if (_ads.isNotEmpty) {
+      _ads[0] = _ads[0].copyWith(viewCount: _ads[0].viewCount + 1);
+      await _saveAdsToPrefs();
+    }
+
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('team_support_counts', jsonEncode(_teamSupportCounts));
+    } catch (e) {
+      print('Destek puanı kaydedilemedi: $e');
+    }
+  }
+
+  // --- ETKİNLİKLER ---
+  List<EventModel> get events => _events;
+
+  /// Şehir / Konuma göre etkinlik filtreleme
+  List<EventModel> searchEventsByLocation(String locationQuery) {
+    if (locationQuery.trim().isEmpty) return _events;
+    final query = locationQuery.trim().toLowerCase();
+    return _events.where((e) =>
+      e.locationCity.toLowerCase().contains(query) ||
+      (e.venueName != null && e.venueName!.toLowerCase().contains(query)) ||
+      e.title.toLowerCase().contains(query)
+    ).toList();
+  }
+
+  /// Kullanıcının oluşturduğu ya da katıldığı geçmiş etkinlikler
+  List<EventModel> getUserEventHistory(String userId) {
+    return _events.where((e) =>
+      e.creatorUserId == userId ||
+      e.participantUserIds.contains(userId)
+    ).toList();
+  }
+
+  /// Yeni Etkinlik Oluşturma Kontrolü
+  /// Eğlence / Parti etkinliklerinde aynı bölgede aynı etkinlikten 2 tane olmaması kuralı!
+  String? canCreateEvent(EventModel event) {
+    if (event.eventType == 'entertainment') {
+      final isDuplicate = _events.any((e) =>
+        e.eventType == 'entertainment' &&
+        e.locationCity.trim().toLowerCase() == event.locationCity.trim().toLowerCase() &&
+        e.title.trim().toLowerCase() == event.title.trim().toLowerCase() &&
+        e.eventDateTime.difference(event.eventDateTime).inHours.abs() < 4
+      );
+      if (isDuplicate) {
+        return 'Bu konumda ve saat aralığında benzer bir eğlence/parti etkinliği zaten mevcut!';
+      }
+    }
+    return null; // Oluşturulabilir
+  }
+
+  Future<bool> createEvent(EventModel event) async {
+    final error = canCreateEvent(event);
+    if (error != null) {
+      return false;
+    }
+    _events.insert(0, event);
+    notifyListeners();
+    await _saveEventsToPrefs();
+    return true;
+  }
+
+  /// Katılma İsteği Gönder (Pending listesine ekle)
+  Future<void> requestToJoinEvent(String eventId, String userId) async {
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx >= 0) {
+      final ev = _events[idx];
+      if (!ev.participantUserIds.contains(userId) && !ev.pendingUserIds.contains(userId)) {
+        final updated = ev.copyWith(
+          pendingUserIds: [...ev.pendingUserIds, userId],
+        );
+        _events[idx] = updated;
+        notifyListeners();
+        await _saveEventsToPrefs();
+      }
+    }
+  }
+
+  /// Katılma İsteğini Onayla (Etkinlik sahibi onaylar)
+  Future<void> approveJoinRequest(String eventId, String userId) async {
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx >= 0) {
+      final ev = _events[idx];
+      final newPending = List<String>.from(ev.pendingUserIds)..remove(userId);
+      final newParticipants = List<String>.from(ev.participantUserIds);
+      if (!newParticipants.contains(userId)) {
+        newParticipants.add(userId);
+      }
+      _events[idx] = ev.copyWith(
+        pendingUserIds: newPending,
+        participantUserIds: newParticipants,
+      );
+      notifyListeners();
+      await _saveEventsToPrefs();
+    }
+  }
+
+  /// Katılma İsteğini Reddet
+  Future<void> rejectJoinRequest(String eventId, String userId) async {
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx >= 0) {
+      final ev = _events[idx];
+      final newPending = List<String>.from(ev.pendingUserIds)..remove(userId);
+      _events[idx] = ev.copyWith(pendingUserIds: newPending);
+      notifyListeners();
+      await _saveEventsToPrefs();
+    }
+  }
+
+  /// Etkinlik Sil
+  Future<void> deleteEvent(String eventId) async {
+    _events.removeWhere((e) => e.id == eventId);
+    notifyListeners();
+    await _saveEventsToPrefs();
+  }
+
+  Future<void> _saveEventsToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(_events.map((e) => e.toMap()).toList());
+      await prefs.setString('app_events', encoded);
+    } catch (e) {
+      print('Etkinlikler kaydedilemedi: $e');
+    }
+  }
 }

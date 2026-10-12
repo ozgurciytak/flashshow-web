@@ -37,6 +37,23 @@ class AuthService extends ChangeNotifier {
         final email = prefs.getString('user_email') ?? 'kullanici@flashshow.com';
         final uid = prefs.getString('user_id') ?? 'local_user';
         final role = prefs.getString('user_role') ?? 'user';
+
+        // Kullanıcının askıya alınıp alınmadığını registered_users içinden teyit et
+        final usersJson = prefs.getString('registered_users');
+        bool isSuspended = false;
+        if (usersJson != null) {
+          final List<dynamic> decoded = jsonDecode(usersJson);
+          final found = decoded.firstWhere((u) => u['email'] == email, orElse: () => null);
+          if (found != null && found['isSuspended'] == true) {
+            isSuspended = true;
+          }
+        }
+
+        if (isSuspended) {
+          await signOut();
+          return;
+        }
+
         _isLocalAuth = true;
         _currentUserModel = UserModel(
           id: uid,
@@ -75,6 +92,25 @@ class AuthService extends ChangeNotifier {
       return 'Lütfen e-posta ve şifrenizi girin.';
     }
 
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final usersJson = prefs.getString('registered_users');
+      if (usersJson != null) {
+        final List<dynamic> decoded = jsonDecode(usersJson);
+        final found = decoded.firstWhere((u) => u['email'] == email, orElse: () => null);
+        if (found != null) {
+          // Askıya alınma kontrolü
+          if (found['isSuspended'] == true) {
+            return 'Bu hesap askıya alınmıştır. Lütfen destek ile iletişime geçin.';
+          }
+          // Şifre kontrolü (Kayıtlı şifre varsa)
+          if (found['password'] != null && found['password'] != password) {
+            return 'Girdiğiniz şifre hatalı. Şifrenizi unuttuysanız sıfırlayabilirsiniz.';
+          }
+        }
+      }
+    } catch (_) {}
+
     _isGuest = false;
     _isLocalAuth = true;
     final uid = 'user_${email.hashCode.abs()}';
@@ -91,9 +127,10 @@ class AuthService extends ChangeNotifier {
       email: email,
       role: role,
       teamId: savedTeam,
+      password: password,
     );
 
-    await _saveLocalSession(email: email, uid: uid, role: role);
+    await _saveLocalSession(email: email, uid: uid, role: role, password: password);
     notifyListeners();
     return null; // Başarılı
   }
@@ -119,9 +156,10 @@ class AuthService extends ChangeNotifier {
       email: email,
       role: role,
       teamId: null,
+      password: password,
     );
 
-    await _saveLocalSession(email: email, uid: uid, role: role);
+    await _saveLocalSession(email: email, uid: uid, role: role, password: password);
     notifyListeners();
     return null; // Başarılı
   }
@@ -130,6 +168,7 @@ class AuthService extends ChangeNotifier {
     required String email, 
     String? uid, 
     String? role,
+    String? password,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -152,6 +191,8 @@ class AuthService extends ChangeNotifier {
         'email': email,
         'role': role ?? 'user',
         'teamId': prefs.getString('team_id'),
+        'isSuspended': false,
+        'password': password ?? '123456',
       };
       if (existingIndex >= 0) {
         usersList[existingIndex] = userMap;
@@ -160,6 +201,78 @@ class AuthService extends ChangeNotifier {
       }
       await prefs.setString('registered_users', jsonEncode(usersList));
     } catch (_) {}
+  }
+
+  // --- ŞİFREMİ UNUTTUM / ŞİFRE SIFIRLAMA ---
+  Future<String?> resetPassword(String email, String newPassword) async {
+    if (email.isEmpty || newPassword.isEmpty) {
+      return 'Lütfen e-posta ve yeni şifrenizi girin.';
+    }
+    if (newPassword.length < 6) {
+      return 'Yeni şifre en az 6 karakter olmalıdır.';
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final usersJson = prefs.getString('registered_users');
+      if (usersJson != null) {
+        List<dynamic> usersList = jsonDecode(usersJson);
+        final index = usersList.indexWhere((u) => u['email'] == email);
+        if (index >= 0) {
+          usersList[index]['password'] = newPassword;
+          await prefs.setString('registered_users', jsonEncode(usersList));
+          return null; // Başarılı
+        }
+      }
+      // Kullanıcı listede yoksa bile e-postayı oluşturup yeni şifresini kaydedelim
+      final newUserMap = {
+        'id': 'user_${email.hashCode.abs()}',
+        'email': email,
+        'role': email.toLowerCase().contains('admin') ? 'admin' : 'user',
+        'teamId': null,
+        'isSuspended': false,
+        'password': newPassword,
+      };
+      List<dynamic> usersList = usersJson != null ? jsonDecode(usersJson) : [];
+      usersList.add(newUserMap);
+      await prefs.setString('registered_users', jsonEncode(usersList));
+      return null;
+    } catch (e) {
+      return 'Şifre güncellenemedi: $e';
+    }
+  }
+
+  // --- HESABI ASKIYA ALMA (KULLANICININ KENDİSİ VEYA ADMİN) ---
+  Future<void> suspendCurrentUser() async {
+    if (_currentUserModel == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final usersJson = prefs.getString('registered_users');
+      if (usersJson != null) {
+        List<dynamic> usersList = jsonDecode(usersJson);
+        final index = usersList.indexWhere((u) => u['email'] == _currentUserModel!.email);
+        if (index >= 0) {
+          usersList[index]['isSuspended'] = true;
+          await prefs.setString('registered_users', jsonEncode(usersList));
+        }
+      }
+    } catch (_) {}
+    await signOut();
+  }
+
+  // --- HESABI KALICI OLARAK SİLME ---
+  Future<void> deleteCurrentUserAccount() async {
+    if (_currentUserModel == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final usersJson = prefs.getString('registered_users');
+      if (usersJson != null) {
+        List<dynamic> usersList = jsonDecode(usersJson);
+        usersList.removeWhere((u) => u['email'] == _currentUserModel!.email || u['id'] == _currentUserModel!.id);
+        await prefs.setString('registered_users', jsonEncode(usersList));
+      }
+    } catch (_) {}
+    await signOut();
   }
 
   Future<void> signOut() async {
@@ -182,12 +295,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> updateUserTeam(String teamId) async {
     if (_currentUserModel != null) {
-      _currentUserModel = UserModel(
-        id: _currentUserModel!.id,
-        email: _currentUserModel!.email,
-        teamId: teamId,
-        role: _currentUserModel!.role,
-      );
+      _currentUserModel = _currentUserModel!.copyWith(teamId: teamId);
 
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -215,6 +323,8 @@ class AuthService extends ChangeNotifier {
         email: _currentUserModel!.email,
         teamId: null,
         role: _currentUserModel!.role,
+        isSuspended: _currentUserModel!.isSuspended,
+        password: _currentUserModel!.password,
       );
 
       try {

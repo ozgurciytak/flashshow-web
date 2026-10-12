@@ -50,6 +50,98 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordDialog() {
+    final resetEmailCtrl = TextEditingController(text: _emailController.text.trim());
+    final newPassCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[850],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_reset, color: Colors.yellow),
+            SizedBox(width: 8),
+            Text('Şifremi Unuttum', style: TextStyle(color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Kayıtlı e-posta adresinizi ve oluşturmak istediğiniz yeni şifrenizi girin.',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: resetEmailCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'E-posta Adresi',
+                labelStyle: TextStyle(color: Colors.grey),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: newPassCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Yeni Şifre (En az 6 karakter)',
+                labelStyle: TextStyle(color: Colors.grey),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow, foregroundColor: Colors.black),
+            onPressed: () async {
+              final email = resetEmailCtrl.text.trim();
+              final newPass = newPassCtrl.text.trim();
+              if (email.isEmpty || newPass.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Lütfen tüm alanları doldurun.')),
+                );
+                return;
+              }
+              final auth = Provider.of<AuthService>(context, listen: false);
+              final err = await auth.resetPassword(email, newPass);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                if (err == null) {
+                  _emailController.text = email;
+                  _passwordController.text = newPass;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Colors.green,
+                      content: Text('Şifreniz başarıyla güncellendi! Yeni şifrenizle giriş yapabilirsiniz.'),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(backgroundColor: Colors.redAccent, content: Text(err)),
+                  );
+                }
+              }
+            },
+            child: const Text('Şifreyi Güncelle'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,65 +152,76 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-              const Icon(Icons.flash_on, size: 80, color: Colors.yellow),
-              const SizedBox(height: 16),
-              Text('app_name'.tr(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _emailController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'email'.tr(),
-                  labelStyle: const TextStyle(color: Colors.grey),
-                  enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'password'.tr(),
-                  labelStyle: const TextStyle(color: Colors.grey),
-                  enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              _isLoading 
-                ? const CircularProgressIndicator(color: Colors.yellow)
-                : ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.yellow,
-                      foregroundColor: Colors.black,
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: Text(_isLogin ? 'login'.tr() : 'signup'.tr()),
+                const Icon(Icons.flash_on, size: 80, color: Colors.yellow),
+                const SizedBox(height: 16),
+                Text('app_name'.tr(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 32),
+                TextField(
+                  controller: _emailController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'email'.tr(),
+                    labelStyle: const TextStyle(color: Colors.grey),
+                    enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
                   ),
-              TextButton(
-                onPressed: () => setState(() => _isLogin = !_isLogin),
-                child: Text(_isLogin ? 'signup'.tr() : 'login'.tr(), style: const TextStyle(color: Colors.white70)),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.flash_on, color: Colors.yellow),
-                label: Text('guest_login'.tr(), style: const TextStyle(color: Colors.white)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.yellow),
-                  minimumSize: const Size(double.infinity, 45),
                 ),
-                onPressed: () {
-                  Provider.of<AuthService>(context, listen: false).loginAsGuest();
-                },
-              ),
-            ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'password'.tr(),
+                    labelStyle: const TextStyle(color: Colors.grey),
+                    enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
+                  ),
+                ),
+                if (_isLogin)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _showForgotPasswordDialog,
+                      child: const Text(
+                        'Şifremi Unuttum?',
+                        style: TextStyle(color: Colors.yellow, fontSize: 13),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                _isLoading 
+                  ? const CircularProgressIndicator(color: Colors.yellow)
+                  : ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.yellow,
+                        foregroundColor: Colors.black,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: Text(_isLogin ? 'login'.tr() : 'signup'.tr()),
+                    ),
+                TextButton(
+                  onPressed: () => setState(() => _isLogin = !_isLogin),
+                  child: Text(_isLogin ? 'signup'.tr() : 'login'.tr(), style: const TextStyle(color: Colors.white70)),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.flash_on, color: Colors.yellow),
+                  label: Text('guest_login'.tr(), style: const TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.yellow),
+                    minimumSize: const Size(double.infinity, 45),
+                  ),
+                  onPressed: () {
+                    Provider.of<AuthService>(context, listen: false).loginAsGuest();
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

@@ -6,6 +6,9 @@ import '../services/database_service.dart';
 import '../models/team_model.dart';
 import 'show_screen.dart';
 import 'admin_screen.dart';
+import 'events_screen.dart';
+import 'create_event_screen.dart';
+import 'account_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -15,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _currentTabIndex = 0;
   String? selectedLeague = 'Süper Lig';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -71,9 +75,45 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: (user?.teamId == null || user!.teamId!.isEmpty)
-            ? _buildTeamSelection(context, authService) 
-            : _buildMainDashboard(context, authService, user.teamId!),
+        child: IndexedStack(
+          index: _currentTabIndex,
+          children: [
+            // Tab 0: Ana Sayfa / Flaş Şov
+            (user?.teamId == null || user!.teamId!.isEmpty)
+                ? _buildTeamSelection(context, authService)
+                : _buildMainDashboard(context, authService, user.teamId!),
+            // Tab 1: Etkinlikler & Arama
+            const EventsScreen(),
+            // Tab 2: Hesabım
+            const AccountScreen(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentTabIndex,
+        backgroundColor: Colors.black87,
+        selectedItemColor: Colors.yellow,
+        unselectedItemColor: Colors.white60,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() {
+            _currentTabIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.flash_on),
+            label: 'Flaş Şov',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event),
+            label: 'Etkinlikler',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Hesabım',
+          ),
+        ],
       ),
     );
   }
@@ -215,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final team = db.getTeamById(teamId) ?? db.allTeams.first;
     Color primary = Color(int.parse('0xFF${team.primaryColorHex}'));
     Color secondary = Color(int.parse('0xFF${team.secondaryColorHex}'));
-    return _buildDashboardContent(context, authService, team.name, team.league, primary, secondary);
+    return _buildDashboardContent(context, authService, team.id, team.name, team.league, primary, secondary);
   }
 
   void _launchShow(
@@ -244,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDashboardContent(BuildContext context, AuthService authService, String teamName, String league, Color primary, Color secondary) {
+  Widget _buildDashboardContent(BuildContext context, AuthService authService, String teamId, String teamName, String league, Color primary, Color secondary) {
     return Column(
       children: [
         _buildAdBanner(),
@@ -289,13 +329,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                // Büyük Flaş Butonu (Dokununca Şovu Başlatır)
+                const SizedBox(height: 18),
+                // Büyük Flaş Butonu
                 GestureDetector(
                   onTap: () => _launchShow(context, teamName, league, primary, secondary),
                   child: Container(
-                    width: 170,
-                    height: 170,
+                    width: 160,
+                    height: 160,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: primary,
@@ -305,15 +345,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     child: Center(
-                      child: Icon(Icons.flash_on, size: 75, color: secondary),
+                      child: Icon(Icons.flash_on, size: 70, color: secondary),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                // Doğrudan Ekrandaki Büyük "ŞOVU BAŞLAT" Butonu
+                const SizedBox(height: 20),
+                // ŞOVU BAŞLAT Butonu
                 SizedBox(
                   width: double.infinity,
-                  height: 54,
+                  height: 52,
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.flash_on, color: Colors.black, size: 26),
                     label: Text(
@@ -329,6 +369,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                // Etkinlik Oluştur Hızlı Butonu
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.add_circle_outline, color: Colors.yellow),
+                    label: const Text(
+                      'Bu Takım İçin Etkinlik Oluştur',
+                      style: TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.yellow, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CreateEventScreen(initialTeamId: teamId),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 10),
                 // Şov Seçenekleri & Takım Değiştir Butonları
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -454,16 +521,33 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         );
-      }
+      },
     );
   }
 
   Widget _buildAdBanner() {
-    return Container(
-      height: 80,
-      color: Colors.black,
-      alignment: Alignment.center,
-      child: const Text('AD BANNER', style: TextStyle(color: Colors.grey)),
+    return Consumer<DatabaseService>(
+      builder: (context, db, _) {
+        final activeAds = db.activeAds;
+        final adTitle = activeAds.isNotEmpty ? activeAds.first.title : 'Taraftar Flash Show';
+        return Container(
+          height: 60,
+          color: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.campaign, color: Colors.yellow, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Sponsor: $adTitle',
+                style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
