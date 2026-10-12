@@ -524,7 +524,10 @@ class AdsAdminTab extends StatelessWidget {
 
     String mediaType = existingAd?.mediaType ?? 'image';
     String adType = existingAd?.type ?? 'sponsor';
-    String targetTeamId = existingAd?.targetTeamId ?? 'all';
+    final validTeamIds = ['all', ...db.allTeams.map((t) => t.id)];
+    String targetTeamId = (existingAd != null && validTeamIds.contains(existingAd.targetTeamId))
+        ? existingAd.targetTeamId
+        : 'all';
     int durationDays = existingAd?.durationDays ?? 7;
     String frequency = existingAd?.frequency ?? 'always';
     int rewardSec = existingAd?.rewardSeconds ?? 15;
@@ -630,8 +633,8 @@ class AdsAdminTab extends StatelessWidget {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   items: [
-                    const DropdownMenuItem(value: 'all', child: Text('🌍 Bütün Takımlarda Göster')),
-                    ...db.allTeams.map((t) => DropdownMenuItem(value: t.id, child: Text('⚽ Sadece ${t.name}'))),
+                    const DropdownMenuItem<String>(value: 'all', child: Text('🌍 Bütün Takımlarda Göster')),
+                    ...db.allTeams.map((t) => DropdownMenuItem<String>(value: t.id, child: Text('⚽ Sadece ${t.name}'))),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => targetTeamId = val);
@@ -652,12 +655,12 @@ class AdsAdminTab extends StatelessWidget {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 3, child: Text('⏳ 3 Gün Boyunca')),
-                    DropdownMenuItem(value: 7, child: Text('⏳ 7 Gün (1 Hafta)')),
-                    DropdownMenuItem(value: 15, child: Text('⏳ 15 Gün')),
-                    DropdownMenuItem(value: 30, child: Text('⏳ 30 Gün (1 Ay)')),
-                    DropdownMenuItem(value: 60, child: Text('⏳ 60 Gün (2 Ay)')),
-                    DropdownMenuItem(value: 365, child: Text('⏳ 1 Yıl (Sürekli)')),
+                    DropdownMenuItem<int>(value: 3, child: Text('⏳ 3 Gün Boyunca')),
+                    DropdownMenuItem<int>(value: 7, child: Text('⏳ 7 Gün (1 Hafta)')),
+                    DropdownMenuItem<int>(value: 15, child: Text('⏳ 15 Gün')),
+                    DropdownMenuItem<int>(value: 30, child: Text('⏳ 30 Gün (1 Ay)')),
+                    DropdownMenuItem<int>(value: 60, child: Text('⏳ 60 Gün (2 Ay)')),
+                    DropdownMenuItem<int>(value: 365, child: Text('⏳ 1 Yıl (Sürekli)')),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => durationDays = val);
@@ -678,9 +681,9 @@ class AdsAdminTab extends StatelessWidget {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'always', child: Text('🔄 Her Şovda / Her Açılışta')),
-                    DropdownMenuItem(value: 'every_2', child: Text('🔄 2 Şovda Bir Göster')),
-                    DropdownMenuItem(value: 'every_3', child: Text('🔄 3 Şovda Bir Göster')),
+                    DropdownMenuItem<String>(value: 'always', child: Text('🔄 Her Şovda / Her Açılışta')),
+                    DropdownMenuItem<String>(value: 'every_2', child: Text('🔄 2 Şovda Bir Göster')),
+                    DropdownMenuItem<String>(value: 'every_3', child: Text('🔄 3 Şovda Bir Göster')),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => frequency = val);
@@ -714,9 +717,9 @@ class AdsAdminTab extends StatelessWidget {
                           labelStyle: TextStyle(color: Colors.white70),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 10, child: Text('10 sn')),
-                          DropdownMenuItem(value: 15, child: Text('15 sn')),
-                          DropdownMenuItem(value: 30, child: Text('30 sn')),
+                          DropdownMenuItem<int>(value: 10, child: Text('10 sn')),
+                          DropdownMenuItem<int>(value: 15, child: Text('15 sn')),
+                          DropdownMenuItem<int>(value: 30, child: Text('30 sn')),
                         ],
                         onChanged: (val) {
                           if (val != null) setState(() => rewardSec = val);

@@ -45,7 +45,7 @@ jobs:
         run: flutter pub get
 
       - name: Code Diagnostics
-        run: flutter analyze || true
+        run: flutter analyze
 
       - name: Build APK (Release)
         run: flutter build apk --release --no-tree-shake-icons
