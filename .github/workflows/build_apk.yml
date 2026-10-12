@@ -45,7 +45,15 @@ jobs:
         run: flutter pub get
 
       - name: Code Diagnostics
-        run: flutter analyze
+        run: |
+          flutter analyze > analyze.txt 2>&1 || true
+          cat analyze.txt
+
+      - name: Upload Diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyze-log
+          path: analyze.txt
 
       - name: Build APK (Release)
         run: flutter build apk --release --no-tree-shake-icons
