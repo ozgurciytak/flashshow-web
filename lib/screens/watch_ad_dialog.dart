@@ -78,12 +78,14 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
   Widget build(BuildContext context) {
     final progress = (_totalDuration - _secondsLeft) / _totalDuration;
 
-    return WillPopScope(
-      onWillPop: () async {
-        if (!_isFinished) {
-          return await _showExitWarning();
+    return PopScope(
+      canPop: _isFinished,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final shouldExit = await _showExitWarning();
+        if (shouldExit && mounted) {
+          Navigator.of(context).pop(false);
         }
-        return true;
       },
       child: Dialog(
         backgroundColor: Colors.grey[900],

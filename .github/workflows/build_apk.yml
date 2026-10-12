@@ -41,6 +41,9 @@ jobs:
           sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.24"/' android/build.gradle || true
           sed -i '/<application/i <uses-permission android:name="android.permission.CAMERA" \/>\n<uses-feature android:name="android.hardware.camera.flash" android:required="false" \/>' android/app/src/main/AndroidManifest.xml || true
 
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Analyze code
         run: flutter analyze || true
 
