@@ -9,6 +9,7 @@ class AuthService extends ChangeNotifier {
   static const String masterAdminPassword = 'FlashAdmin2026!';
 
   UserModel? _currentUserModel;
+  bool _isGuest = false;
   bool _isLocalAuth = false;
 
   UserModel? get currentUserModel => _currentUserModel;

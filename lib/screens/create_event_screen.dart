@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../models/event_model.dart';
-import '../models/team_model.dart';
 
 class CreateEventScreen extends StatefulWidget {
   final String? initialTeamId;

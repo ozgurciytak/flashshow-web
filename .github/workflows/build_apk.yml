@@ -32,6 +32,7 @@ jobs:
       - name: Recreate Android Project files
         run: |
           flutter create . --org com.flashshow.app --project-name flashshow --platforms android
+          rm -rf test/
 
       - name: Configure Android minSdkVersion & Permissions
         run: |
