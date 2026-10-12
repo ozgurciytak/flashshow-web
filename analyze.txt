@@ -1,0 +1,22 @@
+Analyzing flashshow-web...                                      
+
+   info • Don't use 'BuildContext's across async gaps • lib/screens/account_screen.dart:154:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/account_screen.dart:196:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/admin_screen.dart:904:38 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/event_detail_screen.dart:363:42 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/event_detail_screen.dart:431:54 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/event_detail_screen.dart:441:54 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/watch_ad_dialog.dart:206:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/watch_ad_dialog.dart:221:56 • use_build_context_synchronously
+warning • The value of the field '_isGuest' isn't used • lib/services/auth_service.dart:12:8 • unused_field
+warning • The value of the field '_isLocalAuth' isn't used • lib/services/auth_service.dart:13:8 • unused_field
+   info • Don't invoke 'print' in production code • lib/services/auth_service.dart:88:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/database_service.dart:199:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/database_service.dart:249:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/database_service.dart:267:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/database_service.dart:288:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/database_service.dart:434:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/database_service.dart:479:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/database_service.dart:593:7 • avoid_print
+
+18 issues found. (ran in 9.1s)
