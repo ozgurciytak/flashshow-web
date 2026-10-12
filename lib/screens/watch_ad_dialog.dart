@@ -96,9 +96,22 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
                       color: widget.ad.type == 'google' ? Colors.blue[900] : Colors.amber[900],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      widget.ad.type == 'google' ? 'Google AdMob' : 'Sponsor Reklamı',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.ad.mediaType == 'video' ? Icons.videocam : Icons.image,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.ad.type == 'google'
+                              ? 'Google AdMob'
+                              : (widget.ad.mediaType == 'video' ? 'Sponsor Video' : 'Sponsor Reklamı'),
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                   if (!_isFinished)
@@ -118,37 +131,47 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Reklam Görseli & İçeriği
+              // Reklam Medyası (Resim veya Video) & İçeriği
               Container(
                 width: double.infinity,
-                height: 180,
+                height: 190,
                 decoration: BoxDecoration(
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white12),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Icon(
-                      widget.ad.type == 'google' ? Icons.ads_click : Icons.campaign,
-                      size: 64,
-                      color: Colors.yellow,
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        widget.ad.title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    if (widget.ad.mediaUrl.isNotEmpty && widget.ad.mediaType == 'image')
+                      Image.network(
+                        widget.ad.mediaUrl,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildFallbackMediaView(),
+                      )
+                    else
+                      _buildFallbackMediaView(),
+                    
+                    // Video ise oynatma simgesi katmanı
+                    if (widget.ad.mediaType == 'video')
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: Colors.red[800], borderRadius: BorderRadius.circular(4)),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.play_arrow, color: Colors.white, size: 12),
+                              SizedBox(width: 2),
+                              Text('CANLI OYNATILIYOR', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      widget.ad.targetUrl,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
-                    ),
                   ],
                 ),
               ),
@@ -206,6 +229,35 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
           ),
         ),
       );
+  }
+
+  Widget _buildFallbackMediaView() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          widget.ad.mediaType == 'video'
+              ? Icons.play_circle_filled
+              : (widget.ad.type == 'google' ? Icons.ads_click : Icons.campaign),
+          size: 58,
+          color: Colors.yellow,
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            widget.ad.title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          widget.ad.targetUrl,
+          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+      ],
+    );
   }
 
   Future<bool> _showExitWarning() async {

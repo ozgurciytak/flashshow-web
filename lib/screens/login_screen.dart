@@ -205,18 +205,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () => setState(() => _isLogin = !_isLogin),
                   child: Text(_isLogin ? 'signup'.tr() : 'login'.tr(), style: const TextStyle(color: Colors.white70)),
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.flash_on, color: Colors.yellow),
-                  label: Text('guest_login'.tr(), style: const TextStyle(color: Colors.white)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.yellow),
-                    minimumSize: const Size(double.infinity, 45),
-                  ),
-                  onPressed: () {
-                    Provider.of<AuthService>(context, listen: false).loginAsGuest();
-                  },
-                ),
               ],
             ),
           ),

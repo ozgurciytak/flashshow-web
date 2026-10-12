@@ -6,6 +6,7 @@ import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/admin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,9 @@ class FlashShowApp extends StatelessWidget {
         home: Consumer<AuthService>(
           builder: (context, authService, _) {
             if (authService.isAuthenticated) {
+              if (authService.isAdmin) {
+                return const AdminScreen();
+              }
               return const HomeScreen();
             } else {
               return const LoginScreen();

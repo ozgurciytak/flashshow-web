@@ -1,31 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
+import '../services/auth_service.dart';
 import '../models/team_model.dart';
 import '../models/ad_model.dart';
+import 'home_screen.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final db = Provider.of<DatabaseService>(context);
-
     return DefaultTabController(
       length: 5,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Yönetim & İstatistik Paneli'),
+          title: const Text('Yönetim Paneli'),
           backgroundColor: Colors.black87,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.phone_android, color: Colors.yellow),
+              tooltip: 'Taraftar Görünümüne Geç',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Çıkış Yap',
+              onPressed: () {
+                Provider.of<AuthService>(context, listen: false).signOut();
+              },
+            ),
+          ],
           bottom: const TabBar(
             isScrollable: true,
             indicatorColor: Colors.yellow,
             labelColor: Colors.yellow,
             unselectedLabelColor: Colors.white70,
             tabs: [
+              Tab(icon: Icon(Icons.campaign), text: 'Reklam Yönetimi'),
               Tab(icon: Icon(Icons.analytics), text: 'Genel İstatistik'),
               Tab(icon: Icon(Icons.sports_soccer), text: 'Takımlar & Üyeler'),
-              Tab(icon: Icon(Icons.campaign), text: 'Reklamlar & İzlenme'),
               Tab(icon: Icon(Icons.event), text: 'Etkinlikler & Katılım'),
               Tab(icon: Icon(Icons.people), text: 'Kullanıcılar'),
             ],
@@ -33,9 +52,9 @@ class AdminScreen extends StatelessWidget {
         ),
         body: const TabBarView(
           children: [
+            AdsAdminTab(),
             OverviewAdminTab(),
             TeamsAdminTab(),
-            AdsAdminTab(),
             EventsAdminTab(),
             UsersAdminTab(),
           ],
@@ -252,7 +271,7 @@ class TeamsAdminTab extends StatelessWidget {
   }
 }
 
-// 3. REKLAMLAR & İZLENME SAYILARI SEKMESİ
+// REKLAMLAR, MEDYA YÖNETİMİ, SIRALAMA & İZLENME SEKMESİ
 class AdsAdminTab extends StatelessWidget {
   const AdsAdminTab({Key? key}) : super(key: key);
 
@@ -265,56 +284,203 @@ class AdsAdminTab extends StatelessWidget {
       children: [
         ListTile(
           tileColor: Colors.grey[850],
-          leading: const Icon(Icons.add_circle, color: Colors.yellow),
-          title: const Text('Yeni Reklam Ekle (Google / Sponsor)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          subtitle: const Text('Admin panelinden değişken reklam tanımlayın', style: TextStyle(color: Colors.white54, fontSize: 12)),
-          onTap: () => _showAddAdDialog(context, db),
+          leading: const Icon(Icons.add_circle, color: Colors.yellow, size: 28),
+          title: const Text('Yeni Reklam Tanımla (Resim / Video)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          subtitle: const Text('Görsel/video URL, yayın günü, sıklık, hedef takım ve sıra belirleyin', style: TextStyle(color: Colors.white54, fontSize: 12)),
+          onTap: () => _showAddOrEditAdDialog(context, db),
         ),
         const Divider(height: 1, color: Colors.white24),
         Expanded(
           child: ads.isEmpty
-              ? const Center(child: Text('Henüz eklenmiş reklam yok.', style: TextStyle(color: Colors.white54)))
+              ? const Center(child: Text('Henüz eklenmiş reklam bulunmuyor.', style: TextStyle(color: Colors.white54)))
               : ListView.builder(
                   itemCount: ads.length,
                   itemBuilder: (context, index) {
                     final ad = ads[index];
+                    final targetTeam = ad.targetTeamId == 'all'
+                        ? null
+                        : db.getTeamById(ad.targetTeamId);
+
                     return Card(
                       color: Colors.grey[850],
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ListTile(
-                        leading: Icon(
-                          ad.type == 'google' ? Icons.ads_click : Icons.campaign,
-                          color: Colors.yellow,
-                          size: 32,
+                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: ad.isExpired
+                              ? Colors.red.withOpacity(0.4)
+                              : (ad.isActive ? Colors.yellow.withOpacity(0.3) : Colors.white12),
                         ),
-                        title: Row(
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: Text(ad.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: Colors.yellow, borderRadius: BorderRadius.circular(10)),
-                              child: Text('👁️ ${ad.viewCount} İzlenme', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 11)),
+                            // Üst Satır: Sıra, Başlık, İzlenme ve İşlemler
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.yellow,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '#${ad.displayOrder}',
+                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    ad.title,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black45,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '👁️ ${ad.viewCount} İzlenme',
+                                    style: const TextStyle(color: Colors.yellow, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          'Tür: ${ad.type == "google" ? "Google AdMob" : "Özel Sponsor"} | Süre: ${ad.rewardSeconds}sn\nURL: ${ad.targetUrl}',
-                          style: const TextStyle(color: Colors.white54, fontSize: 12),
-                        ),
-                        isThreeLine: true,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Switch(
-                              value: ad.isActive,
-                              activeColor: Colors.yellow,
-                              onChanged: (val) {
-                                db.updateAd(ad.copyWith(isActive: val));
-                              },
+                            const SizedBox(height: 8),
+
+                            // Rozetler: Medya Türü, Süre / Gün, Hedef Takım, Sıklık
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                // Medya Türü
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: ad.mediaType == 'video' ? Colors.red[900] : Colors.blue[900],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(ad.mediaType == 'video' ? Icons.videocam : Icons.image, color: Colors.white, size: 12),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        ad.mediaType == 'video' ? 'Video' : 'Görsel',
+                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Süre Durumu
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: ad.isExpired ? Colors.red[900] : Colors.green[900],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    ad.isExpired
+                                        ? '❌ Süresi Doldu (Yayından Kalktı)'
+                                        : '⏳ ${ad.remainingDays} Gün Kaldı (${ad.durationDays} Günlük)',
+                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                // Hedef Takım
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple[900],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    ad.targetTeamId == 'all'
+                                        ? '⚽ Tüm Takımlar'
+                                        : '⚽ ${targetTeam?.name ?? ad.targetTeamId}',
+                                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                                  ),
+                                ),
+                                // Gösterim Sıklığı
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber[900],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    ad.frequency == 'always'
+                                        ? '🔄 Her Şovda'
+                                        : (ad.frequency == 'every_2' ? '🔄 2 Şovda 1' : '🔄 3 Şovda 1'),
+                                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                                  ),
+                                ),
+                              ],
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                              onPressed: () => db.deleteAd(ad.id),
+                            const SizedBox(height: 8),
+
+                            // Medya & Hedef Link
+                            Text(
+                              'Medya: ${ad.mediaUrl.isEmpty ? "(Örnek Varsayılan)" : ad.mediaUrl}',
+                              style: const TextStyle(color: Colors.white54, fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Hedef: ${ad.targetUrl}',
+                              style: const TextStyle(color: Colors.white38, fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Alt Kontroller: Sıralama Butonları (Yukarı/Aşağı), Düzenle, Switch, Sil
+                            Row(
+                              children: [
+                                // Sıralama Butonları
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_upward, color: Colors.yellow, size: 20),
+                                  tooltip: 'Yukarı Taşı (Önceliği Artır)',
+                                  onPressed: index > 0 ? () => db.moveAdUp(ad.id) : null,
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_downward, color: Colors.yellow, size: 20),
+                                  tooltip: 'Aşağı Taşı (Önceliği Düşür)',
+                                  onPressed: index < ads.length - 1 ? () => db.moveAdDown(ad.id) : null,
+                                ),
+                                const Spacer(),
+                                // Düzenle Butonu
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.yellow),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  ),
+                                  icon: const Icon(Icons.edit, color: Colors.yellow, size: 16),
+                                  label: const Text('Düzenle', style: TextStyle(color: Colors.yellow, fontSize: 12)),
+                                  onPressed: () => _showAddOrEditAdDialog(context, db, existingAd: ad),
+                                ),
+                                const SizedBox(width: 8),
+                                // Aktif / Pasif Switch
+                                Switch(
+                                  value: ad.isActive,
+                                  activeColor: Colors.yellow,
+                                  onChanged: (val) {
+                                    db.updateAd(ad.copyWith(isActive: val));
+                                  },
+                                ),
+                                // Sil Butonu
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                                  tooltip: 'Reklamı Sil',
+                                  onPressed: () => _confirmDeleteAd(context, db, ad.id),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -327,60 +493,237 @@ class AdsAdminTab extends StatelessWidget {
     );
   }
 
-  void _showAddAdDialog(BuildContext context, DatabaseService db) {
-    final titleCtrl = TextEditingController();
-    final urlCtrl = TextEditingController(text: 'https://');
-    String adType = 'sponsor';
-    int rewardSec = 15;
+  void _confirmDeleteAd(BuildContext context, DatabaseService db, String adId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[850],
+        title: const Text('Reklamı Sil', style: TextStyle(color: Colors.redAccent)),
+        content: const Text('Bu reklamı sistemden tamamen silmek istediğinize emin misiniz?', style: TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal', style: TextStyle(color: Colors.white54))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              db.deleteAd(adId);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddOrEditAdDialog(BuildContext context, DatabaseService db, {AdModel? existingAd}) {
+    final isEditing = existingAd != null;
+    final titleCtrl = TextEditingController(text: existingAd?.title ?? '');
+    final mediaUrlCtrl = TextEditingController(text: existingAd?.mediaUrl ?? '');
+    final targetUrlCtrl = TextEditingController(text: existingAd?.targetUrl ?? 'https://');
+    final orderCtrl = TextEditingController(text: '${existingAd?.displayOrder ?? (db.ads.length + 1)}');
+
+    String mediaType = existingAd?.mediaType ?? 'image';
+    String adType = existingAd?.type ?? 'sponsor';
+    String targetTeamId = existingAd?.targetTeamId ?? 'all';
+    int durationDays = existingAd?.durationDays ?? 7;
+    String frequency = existingAd?.frequency ?? 'always';
+    int rewardSec = existingAd?.rewardSeconds ?? 15;
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           backgroundColor: Colors.grey[900],
-          title: const Text('Yeni Reklam Ekle', style: TextStyle(color: Colors.yellow)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            isEditing ? 'Reklamı Düzenle' : 'Yeni Reklam Tanımla',
+            style: const TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 1. Reklam Başlığı
                 TextField(
                   controller: titleCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Reklam Başlığı / Şirket Adı', labelStyle: TextStyle(color: Colors.white70)),
+                  decoration: const InputDecoration(
+                    labelText: 'Reklam / Marka Başlığı *',
+                    labelStyle: TextStyle(color: Colors.white70),
+                  ),
                 ),
+                const SizedBox(height: 14),
+
+                // 2. Medya Türü (Görsel mi, Video mu?)
+                const Text('Medya Türü (Gelen Reklam Formatı)', style: TextStyle(color: Colors.yellow, fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('📷 Resim / Görsel')),
+                        selected: mediaType == 'image',
+                        selectedColor: Colors.yellow,
+                        labelStyle: TextStyle(
+                          color: mediaType == 'image' ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        onSelected: (val) {
+                          if (val) setState(() => mediaType = 'image');
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('🎬 Video')),
+                        selected: mediaType == 'video',
+                        selectedColor: Colors.yellow,
+                        labelStyle: TextStyle(
+                          color: mediaType == 'video' ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        onSelected: (val) {
+                          if (val) setState(() => mediaType = 'video');
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // 3. Medya Bağlantısı / URL (Admin'e gelen resim/video)
                 TextField(
-                  controller: urlCtrl,
+                  controller: mediaUrlCtrl,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Hedef Web Adresi / Bağlantı', labelStyle: TextStyle(color: Colors.white70)),
+                  decoration: InputDecoration(
+                    labelText: mediaType == 'image' ? 'Resim URL / Görsel Bağlantısı' : 'Video URL / Video Bağlantısı',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintText: mediaType == 'image' ? 'https://.../reklam.jpg' : 'https://.../reklam.mp4',
+                    hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // 4. Hedef Web / Sosyal Medya Linki
+                TextField(
+                  controller: targetUrlCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Tıklanınca Açılacak Web / Sosyal Medya Linki',
+                    labelStyle: TextStyle(color: Colors.white70),
+                  ),
                 ),
                 const SizedBox(height: 16),
+
+                // 5. Hedef Takım (Tüm Takımlar mı yoksa Tek Bir Takım mı?)
+                const Text('Hedef Takım Filtresi', style: TextStyle(color: Colors.yellow, fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
-                  value: adType,
+                  value: targetTeamId,
                   dropdownColor: Colors.grey[850],
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Reklam Türü', labelStyle: TextStyle(color: Colors.white70)),
-                  items: const [
-                    DropdownMenuItem(value: 'sponsor', child: Text('Özel Sponsor Reklamı')),
-                    DropdownMenuItem(value: 'google', child: Text('Google AdMob Reklamı')),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.grey[800],
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 'all', child: Text('🌍 Bütün Takımlarda Göster')),
+                    ...db.allTeams.map((t) => DropdownMenuItem(value: t.id, child: Text('⚽ Sadece ${t.name}'))),
                   ],
                   onChanged: (val) {
-                    if (val != null) setState(() => adType = val);
+                    if (val != null) setState(() => targetTeamId = val);
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+
+                // 6. Kaç Gün Yayınlanacak? (Süresi dolunca otomatik kalkar)
+                const Text('Yayınlanma Süresi (Süre Dolunca Otomatik Kalkar)', style: TextStyle(color: Colors.yellow, fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
                 DropdownButtonFormField<int>(
-                  value: rewardSec,
+                  value: durationDays,
                   dropdownColor: Colors.grey[850],
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Minimum İzlenme Süresi', labelStyle: TextStyle(color: Colors.white70)),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.grey[800],
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                   items: const [
-                    DropdownMenuItem(value: 10, child: Text('10 Saniye')),
-                    DropdownMenuItem(value: 15, child: Text('15 Saniye (Standart)')),
-                    DropdownMenuItem(value: 30, child: Text('30 Saniye (Uzun)')),
+                    DropdownMenuItem(value: 3, child: Text('⏳ 3 Gün Boyunca')),
+                    DropdownMenuItem(value: 7, child: Text('⏳ 7 Gün (1 Hafta)')),
+                    DropdownMenuItem(value: 15, child: Text('⏳ 15 Gün')),
+                    DropdownMenuItem(value: 30, child: Text('⏳ 30 Gün (1 Ay)')),
+                    DropdownMenuItem(value: 60, child: Text('⏳ 60 Gün (2 Ay)')),
+                    DropdownMenuItem(value: 365, child: Text('⏳ 1 Yıl (Sürekli)')),
                   ],
                   onChanged: (val) {
-                    if (val != null) setState(() => rewardSec = val);
+                    if (val != null) setState(() => durationDays = val);
                   },
+                ),
+                const SizedBox(height: 16),
+
+                // 7. Ne Sıklıkla Oynatılacak?
+                const Text('Gösterim Sıklığı', style: TextStyle(color: Colors.yellow, fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  value: frequency,
+                  dropdownColor: Colors.grey[850],
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.grey[800],
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'always', child: Text('🔄 Her Şovda / Her Açılışta')),
+                    DropdownMenuItem(value: 'every_2', child: Text('🔄 2 Şovda Bir Göster')),
+                    DropdownMenuItem(value: 'every_3', child: Text('🔄 3 Şovda Bir Göster')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => frequency = val);
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // 8. Gösterim Sırası & Minimum Süre
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: orderCtrl,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Sıra Numarası (Öncelik)',
+                          labelStyle: TextStyle(color: Colors.white70),
+                          hintText: '1, 2, 3...',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        value: rewardSec,
+                        dropdownColor: Colors.grey[850],
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'İzlenme Süresi',
+                          labelStyle: TextStyle(color: Colors.white70),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 10, child: Text('10 sn')),
+                          DropdownMenuItem(value: 15, child: Text('15 sn')),
+                          DropdownMenuItem(value: 30, child: Text('30 sn')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setState(() => rewardSec = val);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -393,21 +736,53 @@ class AdsAdminTab extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow, foregroundColor: Colors.black),
               onPressed: () {
-                if (titleCtrl.text.trim().isNotEmpty) {
-                  db.addAd(AdModel(
-                    id: 'ad_${DateTime.now().millisecondsSinceEpoch}',
+                if (titleCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lütfen reklam başlığı girin.')),
+                  );
+                  return;
+                }
+
+                final orderVal = int.tryParse(orderCtrl.text.trim()) ?? (db.ads.length + 1);
+
+                if (isEditing) {
+                  final updated = existingAd.copyWith(
                     title: titleCtrl.text.trim(),
-                    imageUrl: '',
-                    targetUrl: urlCtrl.text.trim(),
+                    mediaUrl: mediaUrlCtrl.text.trim(),
+                    mediaType: mediaType,
+                    targetUrl: targetUrlCtrl.text.trim(),
+                    targetTeamId: targetTeamId,
+                    durationDays: durationDays,
+                    frequency: frequency,
+                    displayOrder: orderVal,
+                    rewardSeconds: rewardSec,
+                    endDate: existingAd.startDate.add(Duration(days: durationDays)),
+                  );
+                  db.updateAd(updated);
+                } else {
+                  final now = DateTime.now();
+                  final newAd = AdModel(
+                    id: 'ad_${now.millisecondsSinceEpoch}',
+                    title: titleCtrl.text.trim(),
+                    mediaUrl: mediaUrlCtrl.text.trim(),
+                    mediaType: mediaType,
+                    targetUrl: targetUrlCtrl.text.trim(),
                     type: adType,
                     isActive: true,
                     rewardSeconds: rewardSec,
                     viewCount: 0,
-                  ));
-                  Navigator.pop(ctx);
+                    targetTeamId: targetTeamId,
+                    durationDays: durationDays,
+                    startDate: now,
+                    endDate: now.add(Duration(days: durationDays)),
+                    frequency: frequency,
+                    displayOrder: orderVal,
+                  );
+                  db.addAd(newAd);
                 }
+                Navigator.pop(ctx);
               },
-              child: const Text('Ekle'),
+              child: Text(isEditing ? 'Güncelle' : 'Kaydet ve Yayınla'),
             ),
           ],
         ),

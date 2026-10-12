@@ -9,13 +9,12 @@ class AuthService extends ChangeNotifier {
   static const String masterAdminPassword = 'FlashAdmin2026!';
 
   UserModel? _currentUserModel;
-  bool _isGuest = false;
   bool _isLocalAuth = false;
 
   UserModel? get currentUserModel => _currentUserModel;
-  bool get isAuthenticated => _isGuest || _isLocalAuth || _currentUserModel != null;
+  bool get isAuthenticated => _currentUserModel != null;
   bool get isAdmin => _currentUserModel?.role == 'admin';
-  bool get isGuest => _isGuest;
+  bool get isGuest => false;
 
   AuthService() {
     _init();
@@ -47,20 +46,11 @@ class AuthService extends ChangeNotifier {
         await prefs.setString('registered_users', jsonEncode(usersList));
       }
 
-      final isGuestSaved = prefs.getBool('is_guest') ?? false;
+      await prefs.remove('is_guest');
       final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
       final savedTeamId = prefs.getString('team_id');
 
-      if (isGuestSaved) {
-        _isGuest = true;
-        _currentUserModel = UserModel(
-          id: 'guest',
-          email: 'misafir@flashshow.com',
-          role: 'user',
-          teamId: savedTeamId,
-        );
-        notifyListeners();
-      } else if (isLoggedIn) {
+      if (isLoggedIn) {
         final email = prefs.getString('user_email') ?? 'kullanici@flashshow.com';
         final uid = prefs.getString('user_id') ?? 'local_user';
         String role = prefs.getString('user_role') ?? 'user';

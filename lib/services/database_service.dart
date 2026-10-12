@@ -113,20 +113,24 @@ class DatabaseService extends ChangeNotifier {
           AdModel(
             id: 'google_ad_1',
             title: 'Google AdMob Ödüllü Reklam',
-            imageUrl: '',
+            mediaUrl: '',
             targetUrl: 'https://google.com/admob',
             type: 'google',
             isActive: true,
             rewardSeconds: 15,
+            durationDays: 30,
+            displayOrder: 1,
           ),
           AdModel(
             id: 'sponsor_ad_1',
             title: 'Flash Show Resmi Sponsoru',
-            imageUrl: '',
+            mediaUrl: '',
             targetUrl: 'https://flashshow.app',
             type: 'sponsor',
             isActive: true,
             rewardSeconds: 15,
+            durationDays: 30,
+            displayOrder: 2,
           ),
         ];
         _saveAdsToPrefs();
@@ -342,8 +346,25 @@ class DatabaseService extends ChangeNotifier {
   }
 
   // --- REKLAMLAR ---
-  List<AdModel> get ads => _ads;
-  List<AdModel> get activeAds => _ads.where((a) => a.isActive).toList();
+  List<AdModel> get ads {
+    final list = List<AdModel>.from(_ads);
+    list.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    return list;
+  }
+
+  /// Süresi dolmamış ve aktif reklamlar
+  List<AdModel> get activeAds {
+    final list = _ads.where((a) => a.isEligible).toList();
+    list.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    return list;
+  }
+
+  /// Belirli bir takım için geçerli olan aktif reklamlar
+  List<AdModel> getAdsForTeam(String? teamId) {
+    final list = _ads.where((a) => a.isEligible && (a.targetTeamId == 'all' || a.targetTeamId == teamId)).toList();
+    list.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    return list;
+  }
 
   Future<void> addAd(AdModel ad) async {
     _ads.add(ad);
@@ -364,6 +385,44 @@ class DatabaseService extends ChangeNotifier {
     _ads.removeWhere((a) => a.id == id);
     notifyListeners();
     await _saveAdsToPrefs();
+  }
+
+  /// Reklamı bir yukarı taşı
+  Future<void> moveAdUp(String id) async {
+    final sorted = ads;
+    final index = sorted.indexWhere((a) => a.id == id);
+    if (index > 0) {
+      final current = sorted[index];
+      final previous = sorted[index - 1];
+      final updatedCurrent = current.copyWith(displayOrder: previous.displayOrder);
+      final updatedPrevious = previous.copyWith(displayOrder: current.displayOrder == previous.displayOrder ? current.displayOrder + 1 : current.displayOrder);
+      
+      final idxC = _ads.indexWhere((a) => a.id == current.id);
+      final idxP = _ads.indexWhere((a) => a.id == previous.id);
+      if (idxC >= 0) _ads[idxC] = updatedCurrent;
+      if (idxP >= 0) _ads[idxP] = updatedPrevious;
+      notifyListeners();
+      await _saveAdsToPrefs();
+    }
+  }
+
+  /// Reklamı bir aşağı taşı
+  Future<void> moveAdDown(String id) async {
+    final sorted = ads;
+    final index = sorted.indexWhere((a) => a.id == id);
+    if (index >= 0 && index < sorted.length - 1) {
+      final current = sorted[index];
+      final next = sorted[index + 1];
+      final updatedCurrent = current.copyWith(displayOrder: next.displayOrder);
+      final updatedNext = next.copyWith(displayOrder: current.displayOrder == next.displayOrder ? next.displayOrder - 1 : current.displayOrder);
+
+      final idxC = _ads.indexWhere((a) => a.id == current.id);
+      final idxN = _ads.indexWhere((a) => a.id == next.id);
+      if (idxC >= 0) _ads[idxC] = updatedCurrent;
+      if (idxN >= 0) _ads[idxN] = updatedNext;
+      notifyListeners();
+      await _saveAdsToPrefs();
+    }
   }
 
   Future<void> _saveAdsToPrefs() async {

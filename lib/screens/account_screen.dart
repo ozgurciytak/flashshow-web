@@ -95,11 +95,11 @@ class AccountScreen extends StatelessWidget {
 
   void _supportTeamWithAd(BuildContext context, String teamId, String teamName) {
     final db = Provider.of<DatabaseService>(context, listen: false);
-    final activeAds = db.activeAds;
+    final activeAds = db.getAdsForTeam(teamId);
 
     if (activeAds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Şu an aktif izlenebilecek reklam bulunamadı.')),
+        SnackBar(content: Text('$teamName için şu an aktif bir reklam bulunamadı.')),
       );
       return;
     }
@@ -258,13 +258,6 @@ class AccountScreen extends StatelessWidget {
                             team != null ? 'Tuttuğu Takım: ${team.name}' : 'Takım seçilmedi',
                             style: const TextStyle(color: Colors.white70, fontSize: 13),
                           ),
-                          if (auth.isGuest)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: Colors.amber[800], borderRadius: BorderRadius.circular(4)),
-                              child: const Text('Misafir Modu', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                            ),
                         ],
                       ),
                     ),
@@ -419,7 +412,7 @@ class AccountScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // HESAP YÖNETİMİ & GÜVENLİK (Askıya Alma ve Hesap Silme)
-            if (!auth.isGuest && user != null) ...[
+            if (user != null) ...[
               const Text('Hesap Güvenliği & Ayarlar', style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Card(
