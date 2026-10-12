@@ -48,7 +48,8 @@ jobs:
         run: flutter analyze || true
 
       - name: Build APK (Release)
-        run: flutter build apk --release -v --no-tree-shake-icons
+        run: |
+          flutter build apk --release -v --no-tree-shake-icons || (cd android && ./gradlew assembleRelease --stacktrace)
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
