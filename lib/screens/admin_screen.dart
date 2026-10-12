@@ -458,80 +458,185 @@ class EventsAdminTab extends StatelessWidget {
   }
 }
 
-// 5. KULLANICILAR SEKMESİ
+// 5. KULLANICILAR & ADMİN YÖNETİMİ SEKMESİ
 class UsersAdminTab extends StatelessWidget {
   const UsersAdminTab({Key? key}) : super(key: key);
+
+  void _showAddAdminDialog(BuildContext context, DatabaseService db) {
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.admin_panel_settings, color: Colors.yellow),
+            SizedBox(width: 8),
+            Text('Yeni Admin Hesabı Ekle', style: TextStyle(color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ekleyeceğiniz kişi tam yetkili Admin rolüne sahip olacaktır.',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Admin E-posta Adresi',
+                labelStyle: TextStyle(color: Colors.grey),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: passCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Admin Şifresi',
+                labelStyle: TextStyle(color: Colors.grey),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.yellow)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow, foregroundColor: Colors.black),
+            onPressed: () async {
+              final email = emailCtrl.text.trim();
+              final pass = passCtrl.text.trim();
+              if (email.isNotEmpty && pass.length >= 6) {
+                await db.createAdminUser(email: email, password: pass);
+                if (ctx.mounted) Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(backgroundColor: Colors.green, content: Text('$email başarıyla Admin olarak eklendi!')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Lütfen geçerli e-posta ve en az 6 haneli şifre girin.')),
+                );
+              }
+            },
+            child: const Text('Admin Olarak Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final db = Provider.of<DatabaseService>(context);
     final users = db.users;
 
-    if (users.isEmpty) {
-      return const Center(
-        child: Text(
-          'Kayıtlı yerel kullanıcı bulunmuyor.',
-          style: TextStyle(color: Colors.white54),
+    return Column(
+      children: [
+        ListTile(
+          tileColor: Colors.grey[850],
+          leading: const Icon(Icons.person_add_alt_1, color: Colors.yellow),
+          title: const Text('Yeni Admin Hesabı Oluştur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          subtitle: const Text('Başka kişilere admin yetkisi verin', style: TextStyle(color: Colors.white54, fontSize: 12)),
+          onTap: () => _showAddAdminDialog(context, db),
         ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: users.length,
-      itemBuilder: (context, index) {
-        final user = users[index];
-        final team = user.teamId != null ? db.getTeamById(user.teamId!) : null;
-
-        return Card(
-          color: Colors.grey[850],
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: user.isSuspended
-                  ? Colors.red
-                  : (user.role == 'admin' ? Colors.yellow : Colors.blueGrey),
-              child: Icon(
-                user.isSuspended ? Icons.block : (user.role == 'admin' ? Icons.security : Icons.person),
-                color: Colors.black,
-              ),
-            ),
-            title: Row(
-              children: [
-                Expanded(child: Text(user.email, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                if (user.isSuspended)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.red[900], borderRadius: BorderRadius.circular(4)),
-                    child: const Text('ASKIDA', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+        const Divider(height: 1, color: Colors.white24),
+        Expanded(
+          child: users.isEmpty
+              ? const Center(
+                  child: Text(
+                    'Kayıtlı yerel kullanıcı bulunmuyor.',
+                    style: TextStyle(color: Colors.white54),
                   ),
-              ],
-            ),
-            subtitle: Text(
-              'Rol: ${user.role} | Takımı: ${team?.name ?? "Seçilmedi"}\nDurum: ${user.isSuspended ? "Hesap Askıya Alındı" : "Aktif"}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-            isThreeLine: true,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    user.isSuspended ? Icons.play_arrow : Icons.pause,
-                    color: user.isSuspended ? Colors.greenAccent : Colors.orangeAccent,
-                  ),
-                  tooltip: user.isSuspended ? 'Askıyı Kaldır' : 'Askıya Al',
-                  onPressed: () => db.toggleUserSuspension(user.id),
+                )
+              : ListView.builder(
+                  itemCount: users.length,
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    final team = user.teamId != null ? db.getTeamById(user.teamId!) : null;
+                    final isAdmin = user.role == 'admin';
+
+                    return Card(
+                      color: Colors.grey[850],
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: user.isSuspended
+                              ? Colors.red
+                              : (isAdmin ? Colors.yellow : Colors.blueGrey),
+                          child: Icon(
+                            user.isSuspended ? Icons.block : (isAdmin ? Icons.security : Icons.person),
+                            color: Colors.black,
+                          ),
+                        ),
+                        title: Row(
+                          children: [
+                            Expanded(child: Text(user.email, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                            if (isAdmin)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                margin: const EdgeInsets.only(right: 4),
+                                decoration: BoxDecoration(color: Colors.amber[800], borderRadius: BorderRadius.circular(4)),
+                                child: const Text('ADMİN', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            if (user.isSuspended)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: Colors.red[900], borderRadius: BorderRadius.circular(4)),
+                                child: const Text('ASKIDA', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                          ],
+                        ),
+                        subtitle: Text(
+                          'Rol: ${user.role} | Takımı: ${team?.name ?? "Seçilmedi"}\nDurum: ${user.isSuspended ? "Hesap Askıya Alındı" : "Aktif"}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        isThreeLine: true,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                isAdmin ? Icons.verified_user : Icons.add_moderator,
+                                color: isAdmin ? Colors.yellow : Colors.white38,
+                              ),
+                              tooltip: isAdmin ? 'Admin Yetkisini Al (Kullanıcı Yap)' : 'Admin Yap',
+                              onPressed: () => db.toggleUserRole(user.id),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                user.isSuspended ? Icons.play_arrow : Icons.pause,
+                                color: user.isSuspended ? Colors.greenAccent : Colors.orangeAccent,
+                              ),
+                              tooltip: user.isSuspended ? 'Askıyı Kaldır' : 'Askıya Al',
+                              onPressed: () => db.toggleUserSuspension(user.id),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                              tooltip: 'Kullanıcıyı Sil',
+                              onPressed: () => db.deleteUser(user.id),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                  tooltip: 'Kullanıcıyı Sil',
-                  onPressed: () => db.deleteUser(user.id),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+        ),
+      ],
     );
   }
 }

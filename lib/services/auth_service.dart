@@ -4,6 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService extends ChangeNotifier {
+  // Sistem Varsayılan Tek Yetkili Ana Admin
+  static const String masterAdminEmail = 'admin@flashshow.com';
+  static const String masterAdminPassword = 'FlashAdmin2026!';
+
   UserModel? _currentUserModel;
   bool _isGuest = false;
   bool _isLocalAuth = false;
@@ -20,6 +24,29 @@ class AuthService extends ChangeNotifier {
   Future<void> _init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Varsayılan ana admini registered_users tablosuna garanti ekle
+      final usersJson = prefs.getString('registered_users');
+      List<dynamic> usersList = [];
+      if (usersJson != null) {
+        try {
+          usersList = jsonDecode(usersJson);
+        } catch (_) {}
+      }
+
+      final adminIdx = usersList.indexWhere((u) => u['email'] == masterAdminEmail);
+      if (adminIdx < 0) {
+        usersList.insert(0, {
+          'id': 'master_admin',
+          'email': masterAdminEmail,
+          'role': 'admin',
+          'teamId': null,
+          'isSuspended': false,
+          'password': masterAdminPassword,
+        });
+        await prefs.setString('registered_users', jsonEncode(usersList));
+      }
+
       final isGuestSaved = prefs.getBool('is_guest') ?? false;
       final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
       final savedTeamId = prefs.getString('team_id');
@@ -36,17 +63,20 @@ class AuthService extends ChangeNotifier {
       } else if (isLoggedIn) {
         final email = prefs.getString('user_email') ?? 'kullanici@flashshow.com';
         final uid = prefs.getString('user_id') ?? 'local_user';
-        final role = prefs.getString('user_role') ?? 'user';
+        String role = prefs.getString('user_role') ?? 'user';
 
-        // Kullanıcının askıya alınıp alınmadığını registered_users içinden teyit et
-        final usersJson = prefs.getString('registered_users');
+        // Kullanıcının güncel rolünü ve askıya alınma durumunu teyit et
         bool isSuspended = false;
-        if (usersJson != null) {
-          final List<dynamic> decoded = jsonDecode(usersJson);
-          final found = decoded.firstWhere((u) => u['email'] == email, orElse: () => null);
-          if (found != null && found['isSuspended'] == true) {
+        final found = usersList.firstWhere((u) => u['email'] == email, orElse: () => null);
+        if (found != null) {
+          if (found['isSuspended'] == true) {
             isSuspended = true;
           }
+          if (found['role'] != null) {
+            role = found['role'];
+          }
+        } else if (email == masterAdminEmail) {
+          role = 'admin';
         }
 
         if (isSuspended) {
@@ -92,21 +122,35 @@ class AuthService extends ChangeNotifier {
       return 'Lütfen e-posta ve şifrenizi girin.';
     }
 
+    String determinedRole = 'user';
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final usersJson = prefs.getString('registered_users');
       if (usersJson != null) {
         final List<dynamic> decoded = jsonDecode(usersJson);
-        final found = decoded.firstWhere((u) => u['email'] == email, orElse: () => null);
+        final found = decoded.firstWhere((u) => u['email'].toString().toLowerCase() == email.toLowerCase(), orElse: () => null);
         if (found != null) {
           // Askıya alınma kontrolü
           if (found['isSuspended'] == true) {
             return 'Bu hesap askıya alınmıştır. Lütfen destek ile iletişime geçin.';
           }
-          // Şifre kontrolü (Kayıtlı şifre varsa)
+          // Şifre kontrolü
           if (found['password'] != null && found['password'] != password) {
             return 'Girdiğiniz şifre hatalı. Şifrenizi unuttuysanız sıfırlayabilirsiniz.';
           }
+          determinedRole = found['role'] ?? 'user';
+        } else {
+          // Kayıtlı değilse ve ana admin bilgisi girildiyse
+          if (email.toLowerCase() == masterAdminEmail && password == masterAdminPassword) {
+            determinedRole = 'admin';
+          } else {
+            return 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı. Lütfen kayıt olun.';
+          }
+        }
+      } else {
+        if (email.toLowerCase() == masterAdminEmail && password == masterAdminPassword) {
+          determinedRole = 'admin';
         }
       }
     } catch (_) {}
@@ -114,7 +158,6 @@ class AuthService extends ChangeNotifier {
     _isGuest = false;
     _isLocalAuth = true;
     final uid = 'user_${email.hashCode.abs()}';
-    final role = email.toLowerCase().contains('admin') ? 'admin' : 'user';
 
     String? savedTeam;
     try {
@@ -125,12 +168,12 @@ class AuthService extends ChangeNotifier {
     _currentUserModel = UserModel(
       id: uid,
       email: email,
-      role: role,
+      role: determinedRole,
       teamId: savedTeam,
       password: password,
     );
 
-    await _saveLocalSession(email: email, uid: uid, role: role, password: password);
+    await _saveLocalSession(email: email, uid: uid, role: determinedRole, password: password);
     notifyListeners();
     return null; // Başarılı
   }
@@ -146,10 +189,12 @@ class AuthService extends ChangeNotifier {
       return 'Şifre en az 6 karakter olmalıdır.';
     }
 
+    // Yeni kayıt olan herkes 'user' olarak başlar. (Sadece admin paneli içerisinden admin yapılabilir)
+    final role = (email.toLowerCase() == masterAdminEmail) ? 'admin' : 'user';
+
     _isGuest = false;
     _isLocalAuth = true;
     final uid = 'local_${DateTime.now().millisecondsSinceEpoch}';
-    final role = email.toLowerCase().contains('admin') ? 'admin' : 'user';
 
     _currentUserModel = UserModel(
       id: uid,
@@ -217,32 +262,20 @@ class AuthService extends ChangeNotifier {
       final usersJson = prefs.getString('registered_users');
       if (usersJson != null) {
         List<dynamic> usersList = jsonDecode(usersJson);
-        final index = usersList.indexWhere((u) => u['email'] == email);
+        final index = usersList.indexWhere((u) => u['email'].toString().toLowerCase() == email.toLowerCase());
         if (index >= 0) {
           usersList[index]['password'] = newPassword;
           await prefs.setString('registered_users', jsonEncode(usersList));
           return null; // Başarılı
         }
       }
-      // Kullanıcı listede yoksa bile e-postayı oluşturup yeni şifresini kaydedelim
-      final newUserMap = {
-        'id': 'user_${email.hashCode.abs()}',
-        'email': email,
-        'role': email.toLowerCase().contains('admin') ? 'admin' : 'user',
-        'teamId': null,
-        'isSuspended': false,
-        'password': newPassword,
-      };
-      List<dynamic> usersList = usersJson != null ? jsonDecode(usersJson) : [];
-      usersList.add(newUserMap);
-      await prefs.setString('registered_users', jsonEncode(usersList));
-      return null;
+      return 'Bu e-posta adresiyle kayıtlı bir hesap bulunamadı.';
     } catch (e) {
       return 'Şifre güncellenemedi: $e';
     }
   }
 
-  // --- HESABI ASKIYA ALMA (KULLANICININ KENDİSİ VEYA ADMİN) ---
+  // --- HESABI ASKIYA ALMA ---
   Future<void> suspendCurrentUser() async {
     if (_currentUserModel == null) return;
     try {

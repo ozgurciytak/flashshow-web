@@ -299,9 +299,31 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// Admin tarafından veya kullanıcı isteğiyle kullanıcı silme
-  Future<void> deleteUser(String userId) async {
-    _users.removeWhere((u) => u.id == userId);
+  /// Admin tarafından kullanıcının rolünü değiştirme (Admin Yap / Yetki Al)
+  Future<void> toggleUserRole(String userId) async {
+    final index = _users.indexWhere((u) => u.id == userId);
+    if (index >= 0) {
+      final currentRole = _users[index].role;
+      final newRole = currentRole == 'admin' ? 'user' : 'admin';
+      _users[index] = _users[index].copyWith(role: newRole);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('registered_users', jsonEncode(_users.map((u) => u.toMap()).toList()));
+      } catch (_) {}
+    }
+  }
+
+  /// Admin tarafından doğrudan yeni bir Admin hesabı ekleme
+  Future<void> createAdminUser({required String email, required String password}) async {
+    final newAdmin = UserModel(
+      id: 'admin_${DateTime.now().millisecondsSinceEpoch}',
+      email: email,
+      role: 'admin',
+      isSuspended: false,
+      password: password,
+    );
+    _users.insert(0, newAdmin);
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
