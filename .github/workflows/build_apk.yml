@@ -48,12 +48,13 @@ jobs:
         run: |
           flutter analyze > analyze.txt 2>&1 || true
           cat analyze.txt
-
-      - name: Upload Diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: analyze-log
-          path: analyze.txt
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -B diagnostics-log
+          git add analyze.txt
+          git commit -m "diagnostics: analyze log" || true
+          git push -f origin diagnostics-log || true
+          git checkout -
 
       - name: Build APK (Release)
         run: flutter build apk --release --no-tree-shake-icons
